@@ -27,6 +27,13 @@ class NHLSyncResult:
 def sync_nhl_players(database: Database, adapter: NHLPlayerAdapter) -> NHLSyncResult:
     database.initialize()
     players = database.get_players_for_nhl_sync()
+    with database.connect() as connection:
+        rostered_player_ids = {
+            int(row["player_id"])
+            for row in connection.execute("SELECT DISTINCT player_id FROM roster").fetchall()
+        }
+    players = [player for player in players if int(player["id"]) in rostered_player_ids]
+
     matched = 0
     unmatched = 0
     stats_written = 0
