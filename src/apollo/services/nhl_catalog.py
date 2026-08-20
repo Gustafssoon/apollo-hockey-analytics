@@ -33,6 +33,12 @@ class NHLScheduleSyncResult:
 
 
 @dataclass(frozen=True, slots=True)
+class NHLLeagueScheduleSyncResult:
+    teams: int
+    games: int
+
+
+@dataclass(frozen=True, slots=True)
 class NHLGameLogSyncResult:
     player_name: str
     games: int
@@ -67,6 +73,23 @@ def sync_nhl_schedule(
     games = adapter.fetch_schedule(team, season)
     database.upsert_nhl_games(games)
     return NHLScheduleSyncResult(team_abbrev=team, games=len(games))
+
+
+def sync_nhl_schedules(
+    database: Database,
+    adapter: NHLCatalogAdapter,
+    season: int,
+) -> NHLLeagueScheduleSyncResult:
+    database.initialize()
+    teams = adapter.fetch_team_abbrevs()
+    games_by_id: dict[int, NHLGame] = {}
+    for team in teams:
+        for game in adapter.fetch_schedule(team, season):
+            games_by_id[game.game_id] = game
+
+    games = tuple(games_by_id[game_id] for game_id in sorted(games_by_id))
+    database.upsert_nhl_games(games)
+    return NHLLeagueScheduleSyncResult(teams=len(teams), games=len(games))
 
 
 def sync_nhl_game_log(
