@@ -121,7 +121,9 @@ class NHLStatsAdapter:
             )
 
     @staticmethod
-    def _to_lines(stats_by_player: dict[int, dict[str, float]]) -> tuple[NHLSeasonStatLine, ...]:
+    def _to_lines(
+        stats_by_player: dict[int, dict[str, float]],
+    ) -> tuple[NHLSeasonStatLine, ...]:
         return tuple(
             NHLSeasonStatLine(
                 nhl_player_id=player_id,
@@ -144,6 +146,9 @@ class NHLStatsAdapter:
             self._fetch_report("skater", "summary", season, game_type),
             self.SKATER_SUMMARY_FIELDS,
         )
+        for stats in stats_by_player.values():
+            for target_name in self.SKATER_REALTIME_FIELDS.values():
+                stats.setdefault(target_name, 0.0)
         self._merge_report(
             stats_by_player,
             self._fetch_report("skater", "realtime", season, game_type),
