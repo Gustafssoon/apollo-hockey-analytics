@@ -63,8 +63,32 @@ CREATE TABLE IF NOT EXISTS roster_snapshot (
     FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS nhl_player_profile (
+    player_id INTEGER PRIMARY KEY,
+    is_active INTEGER NOT NULL CHECK (is_active IN (0, 1)),
+    team_abbrev TEXT,
+    position TEXT,
+    sweater_number INTEGER,
+    birth_date TEXT,
+    fetched_at TEXT NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS nhl_player_season_stat (
+    player_id INTEGER NOT NULL,
+    season INTEGER NOT NULL,
+    game_type INTEGER NOT NULL,
+    stat_name TEXT NOT NULL,
+    value REAL NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE,
+    PRIMARY KEY (player_id, season, game_type, stat_name)
+);
+
 CREATE INDEX IF NOT EXISTS idx_roster_snapshot_team_time
     ON roster_snapshot(fantasy_team_id, captured_at);
 
 CREATE INDEX IF NOT EXISTS idx_roster_snapshot_player_time
     ON roster_snapshot(player_id, captured_at);
+
+CREATE INDEX IF NOT EXISTS idx_nhl_player_stats_season
+    ON nhl_player_season_stat(season, game_type, stat_name);
