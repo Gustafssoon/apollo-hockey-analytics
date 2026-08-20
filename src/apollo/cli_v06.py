@@ -159,11 +159,11 @@ def _print_waiver_board(board: WaiverBoard) -> None:
     print("Apollo Waiver & Streamer Board")
     print(
         f"\n{board.player_type.title()}s | performance {_season_label(board.season)} | "
-        f"{board.mode} | min GP | {board.start_date} to {board.end_date}"
+        f"{board.mode} | min {board.min_games} GP | {board.start_date} to {board.end_date}"
     )
     print("Categories: " + ", ".join(category.label for category in board.categories))
     scope = "all stored players" if board.include_rostered else "unrostered in stored fantasy data"
-    print(f"Availability scope: {scope}")
+    print(f"Availability scope: {scope} ({board.eligible_players} eligible)")
     _print_schedule_status(board)
     print(
         "Formula: category Z + "
