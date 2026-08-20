@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apollo.adapters.base import LeagueAdapter
 from apollo.db import Database
@@ -91,7 +91,7 @@ def _get_player_id(connection, provider: str, player: PlayerSnapshot) -> int:
 def sync_league(database: Database, adapter: LeagueAdapter) -> SyncResult:
     database.initialize()
     snapshot = adapter.fetch_league()
-    captured_at = datetime.now(timezone.utc).isoformat()
+    captured_at = datetime.now(UTC).isoformat()
 
     roster_count = 0
 
