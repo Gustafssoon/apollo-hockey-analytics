@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 
@@ -57,7 +57,7 @@ class Database:
             return connection.execute(query).fetchall()
 
     def upsert_nhl_player(self, player_id: int, profile: NHLPlayerData) -> int:
-        fetched_at = datetime.now(timezone.utc).isoformat()
+        fetched_at = datetime.now(UTC).isoformat()
         with self.connect() as connection:
             connection.execute(
                 """

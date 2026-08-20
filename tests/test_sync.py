@@ -4,7 +4,6 @@ from apollo.adapters import MockYahooAdapter
 from apollo.db import Database
 from apollo.services import sync_league
 
-
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "mock_league.json"
 
 

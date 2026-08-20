@@ -27,7 +27,7 @@ def _localized_text(value: Any) -> str | None:
 
 def _default_fetch_json(url: str, timeout: float) -> JSONValue:
     request = Request(url, headers={"User-Agent": "Apollo-Hockey-Analytics/0.2"})
-    with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed NHL HTTPS endpoints
+    with urlopen(request, timeout=timeout) as response:
         return json.load(response)
 
 
@@ -109,7 +109,7 @@ class NHLAdapter:
     def fetch_player(self, nhl_player_id: int) -> NHLPlayerData:
         payload = self._fetch_json(f"{self.WEB_BASE_URL}/player/{nhl_player_id}/landing")
         if not isinstance(payload, dict):
-            raise ValueError(f"Unexpected NHL player response for {nhl_player_id}")
+            raise TypeError(f"Unexpected NHL player response for {nhl_player_id}")
 
         first_name = _localized_text(payload.get("firstName")) or ""
         last_name = _localized_text(payload.get("lastName")) or ""

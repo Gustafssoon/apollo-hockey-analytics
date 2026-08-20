@@ -5,7 +5,6 @@ from apollo.db import Database
 from apollo.models import NHLPlayerData, NHLStat
 from apollo.services import sync_league, sync_nhl_players
 
-
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "mock_league.json"
 
 
