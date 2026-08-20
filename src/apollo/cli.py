@@ -1,7 +1,9 @@
 import argparse
+from datetime import date
 from pathlib import Path
 
 from apollo.adapters import MockYahooAdapter, NHLAdapter
+from apollo.analytics import PlayerAnalysis, WindowSummary, analyze_player
 from apollo.db import Database
 from apollo.services import (
     sync_league,
@@ -94,6 +96,29 @@ def build_parser() -> argparse.ArgumentParser:
     _add_season_argument(schedule_parser)
     schedule_parser.add_argument("team")
     schedule_parser.add_argument("--limit", type=int, default=20)
+
+    analyze_parser = subparsers.add_parser(
+        "analyze",
+        help="Analyze a stored player game log",
+    )
+    _add_db_argument(analyze_parser)
+    _add_season_argument(analyze_parser)
+    analyze_parser.add_argument("name")
+    analyze_parser.add_argument(
+        "--schedule-season",
+        type=int,
+        help="Season id used for upcoming schedule density; defaults to --season",
+    )
+    analyze_parser.add_argument(
+        "--as-of",
+        help="Schedule window start date in YYYY-MM-DD format; defaults to today",
+    )
+    analyze_parser.add_argument(
+        "--schedule-days",
+        type=int,
+        default=7,
+        help="Number of calendar days in the upcoming schedule window",
+    )
 
     return parser
 
@@ -230,6 +255,79 @@ def _print_games(database: Database, name: str, season: int, limit: int) -> None
         )
 
 
+def _format_rate(window: WindowSummary, stat_name: str) -> str:
+    value = window.per_game.get(stat_name)
+    if value is None:
+        return "-"
+    if stat_name == "savePctg":
+        return f"{value:.3f}"
+    return f"{value:.2f}"
+
+
+def _print_analysis(analysis: PlayerAnalysis) -> None:
+    print("Apollo Fantasy Analytics")
+    identity = " | ".join(
+        value for value in (analysis.team_abbrev, analysis.position) if value
+    )
+    print(f"\n{analysis.player_name}")
+    if identity:
+        print(identity)
+    print(f"Regular season {_season_label(analysis.season)}\n")
+
+    if analysis.position == "G":
+        columns = (
+            ("saves", "SV/GP"),
+            ("shotsAgainst", "SA/GP"),
+            ("goalsAgainst", "GA/GP"),
+            ("savePctg", "SV%"),
+        )
+    else:
+        columns = (
+            ("goals", "G/GP"),
+            ("assists", "A/GP"),
+            ("points", "P/GP"),
+            ("shots", "SOG/GP"),
+            ("hits", "HIT/GP"),
+            ("blockedShots", "BLK/GP"),
+        )
+
+    header = f"{'Window':<9} {'GP':>3}" + "".join(f" {label:>7}" for _, label in columns)
+    print(header)
+    for window in analysis.windows:
+        values = "".join(
+            f" {_format_rate(window, stat_name):>7}" for stat_name, _ in columns
+        )
+        print(f"{window.label:<9} {window.games:>3}{values}")
+
+    metric_labels = {
+        "points": "P/GP",
+        "goals": "G/GP",
+        "shots": "SOG/GP",
+        "savePctg": "SV%",
+        "saves": "SV/GP",
+        "wins": "W/GP",
+    }
+    metric = metric_labels.get(analysis.trend_metric or "", analysis.trend_metric or "metric")
+    if analysis.trend_percent is None:
+        print(f"\nTrend ({metric}): {analysis.trend}")
+    else:
+        print(f"\nTrend ({metric}, Last 7 vs season): {analysis.trend} ({analysis.trend_percent:+.1f}%)")
+
+    schedule_label = _season_label(analysis.schedule_season)
+    date_range = f"{analysis.schedule_start} to {analysis.schedule_end}"
+    if analysis.upcoming_games is None:
+        print(
+            f"Schedule {schedule_label}: not stored for {analysis.team_abbrev or 'player team'} "
+            f"({date_range})"
+        )
+    else:
+        print(
+            f"Schedule {schedule_label}: {analysis.upcoming_games} regular-season games "
+            f"in next {(analysis.schedule_end - analysis.schedule_start).days + 1} days "
+            f"({date_range})"
+        )
+
+
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     database = Database(args.db)
@@ -324,3 +422,24 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "schedule":
         _print_schedule(database, args.team, args.season, args.limit)
+        return
+
+    if args.command == "analyze":
+        try:
+            as_of = date.fromisoformat(args.as_of) if args.as_of else None
+        except ValueError:
+            print(f'Invalid --as-of date: "{args.as_of}". Use YYYY-MM-DD.')
+            return
+        try:
+            analysis = analyze_player(
+                database,
+                args.name,
+                args.season,
+                as_of=as_of,
+                schedule_season=args.schedule_season,
+                schedule_days=args.schedule_days,
+            )
+        except LookupError as exc:
+            print(exc)
+            return
+        _print_analysis(analysis)
