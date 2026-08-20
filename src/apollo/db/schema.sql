@@ -84,6 +84,39 @@ CREATE TABLE IF NOT EXISTS nhl_player_season_stat (
     PRIMARY KEY (player_id, season, game_type, stat_name)
 );
 
+CREATE TABLE IF NOT EXISTS nhl_game (
+    game_id INTEGER PRIMARY KEY,
+    season INTEGER NOT NULL,
+    game_type INTEGER NOT NULL,
+    game_date TEXT NOT NULL,
+    start_time_utc TEXT,
+    away_team TEXT,
+    home_team TEXT,
+    game_state TEXT,
+    fetched_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS nhl_player_game (
+    player_id INTEGER NOT NULL,
+    game_id INTEGER NOT NULL,
+    team_abbrev TEXT,
+    opponent_abbrev TEXT,
+    home_road TEXT,
+    FOREIGN KEY (player_id) REFERENCES player(id) ON DELETE CASCADE,
+    FOREIGN KEY (game_id) REFERENCES nhl_game(game_id) ON DELETE CASCADE,
+    PRIMARY KEY (player_id, game_id)
+);
+
+CREATE TABLE IF NOT EXISTS nhl_player_game_stat (
+    player_id INTEGER NOT NULL,
+    game_id INTEGER NOT NULL,
+    stat_name TEXT NOT NULL,
+    value REAL NOT NULL,
+    FOREIGN KEY (player_id, game_id)
+        REFERENCES nhl_player_game(player_id, game_id) ON DELETE CASCADE,
+    PRIMARY KEY (player_id, game_id, stat_name)
+);
+
 CREATE INDEX IF NOT EXISTS idx_roster_snapshot_team_time
     ON roster_snapshot(fantasy_team_id, captured_at);
 
@@ -92,3 +125,9 @@ CREATE INDEX IF NOT EXISTS idx_roster_snapshot_player_time
 
 CREATE INDEX IF NOT EXISTS idx_nhl_player_stats_season
     ON nhl_player_season_stat(season, game_type, stat_name);
+
+CREATE INDEX IF NOT EXISTS idx_nhl_game_schedule
+    ON nhl_game(season, game_date, away_team, home_team);
+
+CREATE INDEX IF NOT EXISTS idx_nhl_player_game_player
+    ON nhl_player_game(player_id, game_id);
