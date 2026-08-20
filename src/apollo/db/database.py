@@ -41,14 +41,15 @@ class Database:
 
     def get_players_for_nhl_sync(self) -> list[sqlite3.Row]:
         query = """
-            SELECT
+            SELECT DISTINCT
                 p.id,
                 p.first_name,
                 p.last_name,
                 p.primary_position,
                 p.nhl_team,
                 nhl.external_id AS nhl_external_id
-            FROM player p
+            FROM roster r
+            JOIN player p ON p.id = r.player_id
             LEFT JOIN player_external_id nhl
                 ON nhl.player_id = p.id AND nhl.provider = 'nhl'
             ORDER BY p.id
@@ -159,21 +160,29 @@ class Database:
             else:
                 candidates = connection.execute(
                     """
-                    SELECT id
-                    FROM player
-                    WHERE LOWER(first_name) = LOWER(?)
-                      AND LOWER(last_name) = LOWER(?)
-                      AND (nhl_team = ? OR nhl_team IS NULL)
+                    SELECT p.id
+                    FROM player p
+                    LEFT JOIN player_external_id existing_nhl
+                        ON existing_nhl.player_id = p.id
+                       AND existing_nhl.provider = 'nhl'
+                    WHERE LOWER(p.first_name) = LOWER(?)
+                      AND LOWER(p.last_name) = LOWER(?)
+                      AND (p.nhl_team = ? OR p.nhl_team IS NULL)
+                      AND existing_nhl.player_id IS NULL
                     """,
                     (profile.first_name, profile.last_name, profile.team_abbrev),
                 ).fetchall()
                 if len(candidates) != 1:
                     candidates = connection.execute(
                         """
-                        SELECT id
-                        FROM player
-                        WHERE LOWER(first_name) = LOWER(?)
-                          AND LOWER(last_name) = LOWER(?)
+                        SELECT p.id
+                        FROM player p
+                        LEFT JOIN player_external_id existing_nhl
+                            ON existing_nhl.player_id = p.id
+                           AND existing_nhl.provider = 'nhl'
+                        WHERE LOWER(p.first_name) = LOWER(?)
+                          AND LOWER(p.last_name) = LOWER(?)
+                          AND existing_nhl.player_id IS NULL
                         """,
                         (profile.first_name, profile.last_name),
                     ).fetchall()
