@@ -1,7 +1,7 @@
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -38,7 +38,7 @@ def _extract_numeric_stats(
 class NHLStatsAdapter:
     STATS_BASE_URL = "https://api.nhle.com/stats/rest/en"
 
-    SKATER_SUMMARY_FIELDS = {
+    SKATER_SUMMARY_FIELDS: ClassVar[dict[str, str]] = {
         "gamesPlayed": "gamesPlayed",
         "goals": "goals",
         "assists": "assists",
@@ -49,13 +49,13 @@ class NHLStatsAdapter:
         "penaltyMinutes": "pim",
         "timeOnIcePerGame": "timeOnIcePerGame",
     }
-    SKATER_REALTIME_FIELDS = {
+    SKATER_REALTIME_FIELDS: ClassVar[dict[str, str]] = {
         "hits": "hits",
         "blockedShots": "blockedShots",
         "takeaways": "takeaways",
         "giveaways": "giveaways",
     }
-    GOALIE_SUMMARY_FIELDS = {
+    GOALIE_SUMMARY_FIELDS: ClassVar[dict[str, str]] = {
         "gamesPlayed": "gamesPlayed",
         "gamesStarted": "gamesStarted",
         "wins": "wins",
