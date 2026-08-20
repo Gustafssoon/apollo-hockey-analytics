@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Apollo local databases
+*.db
+*.db-shm
+*.db-wal
