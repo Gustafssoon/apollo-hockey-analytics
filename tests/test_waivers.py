@@ -87,6 +87,17 @@ def _roster_player(database: Database, player_id: int) -> None:
         )
 
 
+def _mark_schedule_synced(database: Database, *teams: str) -> None:
+    with database.connect() as connection:
+        connection.executemany(
+            """
+            INSERT INTO nhl_schedule_sync (season, team_abbrev, fetched_at, game_count)
+            VALUES (?, ?, 'test', 82)
+            """,
+            [(SCHEDULE_SEASON, team) for team in teams],
+        )
+
+
 def _game(
     game_id: int,
     game_date: str,
@@ -127,7 +138,12 @@ def test_league_schedule_sync_deduplicates_games(tmp_path):
             "SELECT COUNT(*) AS count FROM nhl_game WHERE season = ?",
             (SCHEDULE_SEASON,),
         ).fetchone()["count"]
+        synced = connection.execute(
+            "SELECT COUNT(*) AS count FROM nhl_schedule_sync WHERE season = ?",
+            (SCHEDULE_SEASON,),
+        ).fetchone()["count"]
     assert stored == 2
+    assert synced == 2
 
 
 def test_waiver_board_excludes_rostered_and_uses_schedule_opportunity(tmp_path):
@@ -170,6 +186,7 @@ def test_waiver_board_excludes_rostered_and_uses_schedule_opportunity(tmp_path):
             _game(13, "2026-10-13", "COL", "BOS"),
         )
     )
+    _mark_schedule_synced(database, "EDM", "COL", "BOS")
 
     board = build_waiver_board(
         database,
@@ -281,6 +298,7 @@ def test_incomplete_schedule_disables_schedule_component(tmp_path):
         blocks=26,
     )
     database.upsert_nhl_games((_game(200, "2026-10-07", "EDM", "COL"),))
+    _mark_schedule_synced(database, "EDM", "COL")
 
     board = build_waiver_board(
         database,
