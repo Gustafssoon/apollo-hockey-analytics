@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Protocol
 
 from apollo.db import Database
@@ -45,6 +46,28 @@ class NHLGameLogSyncResult:
     stats_written: int
 
 
+def _record_schedule_syncs(
+    database: Database,
+    season: int,
+    game_counts: dict[str, int],
+) -> None:
+    fetched_at = datetime.now(UTC).isoformat()
+    with database.connect() as connection:
+        connection.executemany(
+            """
+            INSERT INTO nhl_schedule_sync (season, team_abbrev, fetched_at, game_count)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(season, team_abbrev) DO UPDATE SET
+                fetched_at = excluded.fetched_at,
+                game_count = excluded.game_count
+            """,
+            [
+                (season, team.upper(), fetched_at, game_count)
+                for team, game_count in sorted(game_counts.items())
+            ],
+        )
+
+
 def sync_nhl_player_pool(
     database: Database,
     adapter: NHLCatalogAdapter,
@@ -72,6 +95,7 @@ def sync_nhl_schedule(
     team = team_abbrev.upper()
     games = adapter.fetch_schedule(team, season)
     database.upsert_nhl_games(games)
+    _record_schedule_syncs(database, season, {team: len(games)})
     return NHLScheduleSyncResult(team_abbrev=team, games=len(games))
 
 
@@ -83,12 +107,17 @@ def sync_nhl_schedules(
     database.initialize()
     teams = adapter.fetch_team_abbrevs()
     games_by_id: dict[int, NHLGame] = {}
-    for team in teams:
-        for game in adapter.fetch_schedule(team, season):
+    game_counts: dict[str, int] = {}
+    for raw_team in teams:
+        team = raw_team.upper()
+        team_games = adapter.fetch_schedule(team, season)
+        game_counts[team] = len(team_games)
+        for game in team_games:
             games_by_id[game.game_id] = game
 
     games = tuple(games_by_id[game_id] for game_id in sorted(games_by_id))
     database.upsert_nhl_games(games)
+    _record_schedule_syncs(database, season, game_counts)
     return NHLLeagueScheduleSyncResult(teams=len(teams), games=len(games))
 
 
