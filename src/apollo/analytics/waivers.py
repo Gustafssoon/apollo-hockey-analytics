@@ -32,6 +32,7 @@ class WaiverBoard:
     schedule_season: int
     player_type: str
     mode: str
+    min_games: int
     categories: tuple[CategorySpec, ...]
     start_date: date
     end_date: date
@@ -79,7 +80,10 @@ def _rostered_players(database: Database) -> set[tuple[str, str]]:
             """
         ).fetchall()
     return {
-        _identity_key(str(row["player_name"]), str(row["nhl_team"]) if row["nhl_team"] else None)
+        _identity_key(
+            str(row["player_name"]),
+            str(row["nhl_team"]) if row["nhl_team"] else None,
+        )
         for row in rows
     }
 
@@ -111,17 +115,10 @@ def _schedule_snapshot(
         coverage_row = connection.execute(
             """
             SELECT COUNT(*) AS count
-            FROM (
-                SELECT away_team AS team_abbrev
-                FROM nhl_game
-                WHERE season = ? AND game_type = 2 AND away_team IS NOT NULL
-                UNION
-                SELECT home_team AS team_abbrev
-                FROM nhl_game
-                WHERE season = ? AND game_type = 2 AND home_team IS NOT NULL
-            )
+            FROM nhl_schedule_sync
+            WHERE season = ? AND game_count > 0
             """,
-            (season, season),
+            (season,),
         ).fetchone()
         team_count = int(coverage_row["count"]) if coverage_row is not None else 0
         if expected_teams == 0:
@@ -295,6 +292,7 @@ def build_waiver_board(
         raise ValueError("waiver score weights must be non-negative")
 
     resolved_days = max(1, days)
+    resolved_min_games = max(0, min_games)
     resolved_schedule_season = schedule_season or season
     start_date = as_of or datetime.now(UTC).date()
     end_date = start_date + timedelta(days=resolved_days - 1)
@@ -306,7 +304,7 @@ def build_waiver_board(
         player_type=player_type,
         categories=categories,
         mode=mode,
-        min_games=min_games,
+        min_games=resolved_min_games,
         limit=10000,
     )
     rostered = _rostered_players(database)
@@ -368,7 +366,12 @@ def build_waiver_board(
         trend = trends.get(key)
         trend_label = trend.label if trend is not None else "N/A"
         trend_percent = trend.percent if trend is not None else None
-        trend_signal = 1.0 if trend_label == "UP" else -1.0 if trend_label == "DOWN" else 0.0
+        if trend_label == "UP":
+            trend_signal = 1.0
+        elif trend_label == "DOWN":
+            trend_signal = -1.0
+        else:
+            trend_signal = 0.0
         trend_component = trend_weight * trend_signal
         score = player.score + schedule_component + trend_component
         scored.append(
@@ -420,6 +423,7 @@ def build_waiver_board(
         schedule_season=resolved_schedule_season,
         player_type=player_type,
         mode=mode,
+        min_games=resolved_min_games,
         categories=ranking.categories,
         start_date=start_date,
         end_date=end_date,
