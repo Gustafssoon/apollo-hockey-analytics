@@ -135,6 +135,57 @@ def test_player_pool_sync_reuses_existing_player(tmp_path):
     assert count == 1
 
 
+def test_player_pool_sync_does_not_overwrite_conflicting_nhl_identity(tmp_path):
+    database = Database(tmp_path / "apollo.db")
+    database.initialize()
+    with database.connect() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO player (first_name, last_name, primary_position, nhl_team)
+            VALUES ('Alex', 'Example', 'C', 'EDM')
+            """
+        )
+        existing_player_id = int(cursor.lastrowid)
+        connection.execute(
+            """
+            INSERT INTO player_external_id (player_id, provider, external_id)
+            VALUES (?, 'nhl', '111')
+            """,
+            (existing_player_id,),
+        )
+
+    new_player_id = database.upsert_nhl_pool_player(
+        NHLPlayerData(
+            nhl_player_id=222,
+            first_name="Alex",
+            last_name="Example",
+            team_abbrev="EDM",
+            position="C",
+            is_active=True,
+            sweater_number=10,
+            birth_date="2000-01-01",
+            season=None,
+            stats=(),
+        )
+    )
+
+    assert new_player_id != existing_player_id
+    with database.connect() as connection:
+        identities = connection.execute(
+            """
+            SELECT player_id, external_id
+            FROM player_external_id
+            WHERE provider = 'nhl'
+            ORDER BY external_id
+            """
+        ).fetchall()
+
+    assert [(row["player_id"], row["external_id"]) for row in identities] == [
+        (existing_player_id, "111"),
+        (new_player_id, "222"),
+    ]
+
+
 def test_schedule_and_game_log_persist(tmp_path):
     database = Database(tmp_path / "apollo.db")
     database.initialize()
