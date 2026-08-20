@@ -96,6 +96,14 @@ CREATE TABLE IF NOT EXISTS nhl_game (
     fetched_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS nhl_schedule_sync (
+    season INTEGER NOT NULL,
+    team_abbrev TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    game_count INTEGER NOT NULL,
+    PRIMARY KEY (season, team_abbrev)
+);
+
 CREATE TABLE IF NOT EXISTS nhl_player_game (
     player_id INTEGER NOT NULL,
     game_id INTEGER NOT NULL,
