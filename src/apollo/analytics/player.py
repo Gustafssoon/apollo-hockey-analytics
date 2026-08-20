@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from apollo.db import Database
 
@@ -160,7 +160,7 @@ def analyze_player(
     last_7 = _summarize("Last 7", games[:7])
     trend_metric, trend_label, trend_percent = _trend(position, season_summary, last_7)
 
-    schedule_start = as_of or date.today()
+    schedule_start = as_of or datetime.now(UTC).date()
     schedule_length = max(1, schedule_days)
     resolved_schedule_season = schedule_season or season
     upcoming_games = _schedule_count(
