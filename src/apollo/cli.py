@@ -3,11 +3,26 @@ from pathlib import Path
 
 from apollo.adapters import MockYahooAdapter, NHLAdapter
 from apollo.db import Database
-from apollo.services import sync_league, sync_nhl_players
+from apollo.services import (
+    sync_league,
+    sync_nhl_game_log,
+    sync_nhl_player_pool,
+    sync_nhl_players,
+    sync_nhl_schedule,
+)
 
 
 def _add_db_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--db", default="apollo.db", help="SQLite database path")
+
+
+def _add_season_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--season",
+        type=int,
+        required=True,
+        help="NHL season id, for example 20252026",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,15 +42,65 @@ def build_parser() -> argparse.ArgumentParser:
 
     nhl_parser = subparsers.add_parser("nhl", help="NHL data commands")
     nhl_subparsers = nhl_parser.add_subparsers(dest="nhl_command", required=True)
+
     nhl_sync_parser = nhl_subparsers.add_parser("sync", help="Match players and sync NHL data")
     _add_db_argument(nhl_sync_parser)
     nhl_sync_parser.add_argument("--timeout", type=float, default=20.0)
+
+    nhl_pool_parser = nhl_subparsers.add_parser(
+        "pool",
+        help="Import the NHL player pool from team rosters",
+    )
+    _add_db_argument(nhl_pool_parser)
+    _add_season_argument(nhl_pool_parser)
+    nhl_pool_parser.add_argument("--timeout", type=float, default=20.0)
+
+    nhl_game_log_parser = nhl_subparsers.add_parser(
+        "game-log",
+        help="Sync one player's NHL game log",
+    )
+    _add_db_argument(nhl_game_log_parser)
+    _add_season_argument(nhl_game_log_parser)
+    nhl_game_log_parser.add_argument("name")
+    nhl_game_log_parser.add_argument("--game-type", type=int, default=2)
+    nhl_game_log_parser.add_argument("--timeout", type=float, default=20.0)
+
+    nhl_schedule_parser = nhl_subparsers.add_parser(
+        "schedule",
+        help="Sync one NHL team's season schedule",
+    )
+    _add_db_argument(nhl_schedule_parser)
+    _add_season_argument(nhl_schedule_parser)
+    nhl_schedule_parser.add_argument("team")
+    nhl_schedule_parser.add_argument("--timeout", type=float, default=20.0)
 
     player_parser = subparsers.add_parser("player", help="Show a player's NHL data")
     _add_db_argument(player_parser)
     player_parser.add_argument("name", help='Player name, for example "Connor McDavid"')
 
+    players_parser = subparsers.add_parser("players", help="List stored NHL players")
+    _add_db_argument(players_parser)
+    players_parser.add_argument("--team")
+    players_parser.add_argument("--limit", type=int, default=50)
+
+    games_parser = subparsers.add_parser("games", help="Show a stored player game log")
+    _add_db_argument(games_parser)
+    _add_season_argument(games_parser)
+    games_parser.add_argument("name")
+    games_parser.add_argument("--limit", type=int, default=10)
+
+    schedule_parser = subparsers.add_parser("schedule", help="Show a stored NHL team schedule")
+    _add_db_argument(schedule_parser)
+    _add_season_argument(schedule_parser)
+    schedule_parser.add_argument("team")
+    schedule_parser.add_argument("--limit", type=int, default=20)
+
     return parser
+
+
+def _season_label(season: int) -> str:
+    value = str(season)
+    return f"{value[:4]}-{value[6:]}" if len(value) == 8 else value
 
 
 def _print_player(database: Database, name: str) -> None:
@@ -49,9 +114,7 @@ def _print_player(database: Database, name: str) -> None:
     print("Apollo Hockey Analytics")
     print(f"\n{profile['first_name']} {profile['last_name']}")
     team_and_position = " | ".join(
-        value
-        for value in (profile["nhl_team"], profile["primary_position"])
-        if value
+        value for value in (profile["nhl_team"], profile["primary_position"]) if value
     )
     if team_and_position:
         print(team_and_position)
@@ -66,11 +129,7 @@ def _print_player(database: Database, name: str) -> None:
         print("No regular-season stats stored.")
         return
 
-    season = str(profile["season"])
-    if len(season) == 8:
-        season = f"{season[:4]}-{season[6:]}"
-    print(f"\nRegular season {season}")
-
+    print(f"\nRegular season {_season_label(int(profile['season']))}")
     stats = {row["stat_name"]: row["value"] for row in stat_rows}
     display_order = (
         ("gamesPlayed", "GP"),
@@ -91,7 +150,7 @@ def _print_player(database: Database, name: str) -> None:
     for stat_name, label in display_order:
         if stat_name not in stats:
             continue
-        value = stats[stat_name]
+        value = float(stats[stat_name])
         if stat_name == "savePctg":
             formatted = f"{value:.3f}"
         elif value.is_integer():
@@ -100,9 +159,75 @@ def _print_player(database: Database, name: str) -> None:
             formatted = f"{value:.2f}"
         print(f"{label:<4} {formatted}")
         shown = True
-
     if not shown:
         print("No displayable stats stored.")
+
+
+def _print_players(database: Database, team: str | None, limit: int) -> None:
+    database.initialize()
+    rows = database.get_nhl_players(team, limit)
+    if not rows:
+        print("No NHL players stored. Run 'apollo nhl pool --season <SEASON>' first.")
+        return
+    print("Apollo NHL Player Pool\n")
+    for row in rows:
+        number = f"#{row['sweater_number']} " if row["sweater_number"] is not None else ""
+        print(
+            f"{row['nhl_team'] or '-':<3} {row['primary_position']:<3} "
+            f"{number}{row['first_name']} {row['last_name']} "
+            f"({row['nhl_external_id']})"
+        )
+
+
+def _print_schedule(database: Database, team: str, season: int, limit: int) -> None:
+    database.initialize()
+    team = team.upper()
+    rows = database.get_team_schedule(team, season, limit)
+    if not rows:
+        print(
+            f"No stored schedule for {team} {_season_label(season)}. "
+            f"Run 'apollo nhl schedule {team} --season {season}' first."
+        )
+        return
+    print(f"{team} schedule {_season_label(season)}\n")
+    for row in rows:
+        if row["away_team"] == team:
+            opponent = f"@ {row['home_team']}"
+        else:
+            opponent = f"vs {row['away_team']}"
+        state = f" [{row['game_state']}]" if row["game_state"] else ""
+        print(f"{row['game_date']}  {opponent:<8}{state}")
+
+
+def _print_games(database: Database, name: str, season: int, limit: int) -> None:
+    database.initialize()
+    rows = database.get_player_game_log(name, season, limit)
+    if not rows:
+        print(
+            f'No stored game log for "{name}" {_season_label(season)}. '
+            f"Run 'apollo nhl game-log \"{name}\" --season {season}' first."
+        )
+        return
+    print(f"{name} game log {_season_label(season)}\n")
+    for game, stats in rows:
+        location = "@" if game["home_road"] == "R" else "vs"
+        core = []
+        for key, label in (
+            ("goals", "G"),
+            ("assists", "A"),
+            ("points", "P"),
+            ("shots", "SOG"),
+            ("hits", "HIT"),
+            ("blockedShots", "BLK"),
+            ("saves", "SV"),
+        ):
+            if key in stats:
+                value = stats[key]
+                core.append(f"{label} {int(value) if value.is_integer() else value:.3g}")
+        print(
+            f"{game['game_date']}  {location} {game['opponent_abbrev'] or '-':<3}  "
+            + "  ".join(core)
+        )
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -130,7 +255,6 @@ def main(argv: list[str] | None = None) -> None:
         if not rows:
             print("No user roster found. Run 'apollo sync --source mock' first.")
             return
-
         print("Apollo Hockey Analytics")
         print(f"\n{rows[0]['fantasy_team']} roster\n")
         for row in rows:
@@ -147,5 +271,56 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Stats written: {result.stats_written}")
         return
 
+    if args.command == "nhl" and args.nhl_command == "pool":
+        result = sync_nhl_player_pool(
+            database,
+            NHLAdapter(timeout=args.timeout),
+            args.season,
+        )
+        print("NHL player pool sync complete")
+        print(f"Teams: {result.teams}")
+        print(f"Players: {result.players}")
+        return
+
+    if args.command == "nhl" and args.nhl_command == "game-log":
+        try:
+            result = sync_nhl_game_log(
+                database,
+                NHLAdapter(timeout=args.timeout),
+                args.name,
+                args.season,
+                args.game_type,
+            )
+        except LookupError as exc:
+            print(exc)
+            return
+        print(f"NHL game log synced: {result.player_name}")
+        print(f"Games: {result.games}")
+        print(f"Stats written: {result.stats_written}")
+        return
+
+    if args.command == "nhl" and args.nhl_command == "schedule":
+        result = sync_nhl_schedule(
+            database,
+            NHLAdapter(timeout=args.timeout),
+            args.team,
+            args.season,
+        )
+        print(f"NHL schedule synced: {result.team_abbrev}")
+        print(f"Games: {result.games}")
+        return
+
     if args.command == "player":
         _print_player(database, args.name)
+        return
+
+    if args.command == "players":
+        _print_players(database, args.team, args.limit)
+        return
+
+    if args.command == "games":
+        _print_games(database, args.name, args.season, args.limit)
+        return
+
+    if args.command == "schedule":
+        _print_schedule(database, args.team, args.season, args.limit)
