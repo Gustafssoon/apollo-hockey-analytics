@@ -83,10 +83,21 @@ DEFAULT_SKATER_CATEGORIES = ("G", "A", "PPP", "SOG", "HIT", "BLK")
 DEFAULT_GOALIE_CATEGORIES = ("W", "SV%", "GAA", "SHO")
 
 
+def _validate_player_type(player_type: str) -> None:
+    if player_type not in {"skater", "goalie"}:
+        raise ValueError("player_type must be 'skater' or 'goalie'")
+
+
+def _validate_mode(mode: str) -> None:
+    if mode not in {"total", "per-game"}:
+        raise ValueError("mode must be 'total' or 'per-game'")
+
+
 def resolve_categories(
     raw_categories: str | None,
     player_type: str,
 ) -> tuple[CategorySpec, ...]:
+    _validate_player_type(player_type)
     if raw_categories:
         labels = tuple(item.strip().upper() for item in raw_categories.split(",") if item.strip())
     elif player_type == "goalie":
@@ -225,10 +236,8 @@ def rank_players(
     min_games: int = 10,
     limit: int = 25,
 ) -> RankingTable:
-    if player_type not in {"skater", "goalie"}:
-        raise ValueError("player_type must be 'skater' or 'goalie'")
-    if mode not in {"total", "per-game"}:
-        raise ValueError("mode must be 'total' or 'per-game'")
+    _validate_player_type(player_type)
+    _validate_mode(mode)
 
     resolved = resolve_categories(categories, player_type)
     eligible = _eligible_profiles(
@@ -298,6 +307,8 @@ def leaderboard(
     min_games: int = 1,
     limit: int = 20,
 ) -> tuple[CategorySpec, tuple[StatLeader, ...]]:
+    _validate_player_type(player_type)
+    _validate_mode(mode)
     category = resolve_categories(stat, player_type)[0]
     eligible = _eligible_profiles(
         database,
@@ -332,14 +343,18 @@ def compare_players(
     season: int,
     names: tuple[str, ...],
     *,
+    player_type: str = "skater",
     categories: str | None = None,
     mode: str = "per-game",
 ) -> tuple[tuple[CategorySpec, ...], tuple[PlayerComparison, ...]]:
-    resolved = resolve_categories(categories, "skater")
+    _validate_player_type(player_type)
+    _validate_mode(mode)
+    resolved = resolve_categories(categories, player_type)
     wanted = {name.strip().casefold() for name in names}
+    order = {name.strip().casefold(): index for index, name in enumerate(names)}
     comparisons: list[PlayerComparison] = []
     for profile in _load_profiles(database, season):
-        if profile.name.casefold() not in wanted:
+        if profile.name.casefold() not in wanted or not _matches_player_type(profile, player_type):
             continue
         values: dict[str, float] = {}
         for category in resolved:
@@ -355,5 +370,5 @@ def compare_players(
                 values=values,
             )
         )
-    comparisons.sort(key=lambda item: names.index(next(name for name in names if name.casefold() == item.name.casefold())))
+    comparisons.sort(key=lambda item: order.get(item.name.casefold(), len(order)))
     return resolved, tuple(comparisons)
