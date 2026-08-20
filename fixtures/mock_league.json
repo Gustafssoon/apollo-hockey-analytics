@@ -1,0 +1,35 @@
+{
+  "league": {
+    "id": "apollo-test-001",
+    "name": "Apollo Test League"
+  },
+  "stat_categories": [
+    {"abbr": "G", "display_name": "Goals"},
+    {"abbr": "A", "display_name": "Assists"},
+    {"abbr": "SOG", "display_name": "Shots on Goal"},
+    {"abbr": "HIT", "display_name": "Hits"},
+    {"abbr": "BLK", "display_name": "Blocks"}
+  ],
+  "teams": [
+    {
+      "id": "team-1",
+      "name": "Apollo",
+      "is_user_team": true,
+      "players": [
+        {"id": "p-1", "first_name": "Connor", "last_name": "McDavid", "primary_position": "C", "nhl_team": "EDM"},
+        {"id": "p-2", "first_name": "Matthew", "last_name": "Tkachuk", "primary_position": "LW", "nhl_team": "FLA"},
+        {"id": "p-3", "first_name": "Jake", "last_name": "Sanderson", "primary_position": "D", "nhl_team": "OTT"},
+        {"id": "p-4", "first_name": "Ilya", "last_name": "Sorokin", "primary_position": "G", "nhl_team": "NYI"}
+      ]
+    },
+    {
+      "id": "team-2",
+      "name": "Delphi",
+      "is_user_team": false,
+      "players": [
+        {"id": "p-5", "first_name": "Nathan", "last_name": "MacKinnon", "primary_position": "C", "nhl_team": "COL"},
+        {"id": "p-6", "first_name": "Cale", "last_name": "Makar", "primary_position": "D", "nhl_team": "COL"}
+      ]
+    }
+  ]
+}
