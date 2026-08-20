@@ -6,7 +6,6 @@ from apollo.analytics import analyze_player
 from apollo.db import Database
 from apollo.models import NHLGame, NHLGameLogEntry, NHLPlayerData, NHLStat
 
-
 SEASON = 20252026
 SCHEDULE_SEASON = 20262027
 
