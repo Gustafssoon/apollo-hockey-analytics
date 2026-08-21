@@ -542,7 +542,7 @@ def _default_transport(
 ) -> tuple[int, bytes]:
     request = Request(url, data=data, headers=dict(headers), method=method)
     try:
-        with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed HTTPS endpoints
+        with urlopen(request, timeout=timeout) as response:
             return int(response.status), response.read()
     except HTTPError as error:
         return int(error.code), error.read()
