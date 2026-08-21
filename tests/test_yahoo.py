@@ -3,6 +3,7 @@ from collections.abc import Mapping
 
 import pytest
 
+from apollo import cli_v09
 from apollo.adapters import (
     YahooCredentials,
     YahooFantasyClient,
@@ -196,6 +197,29 @@ def test_fantasy_403_preserves_authorization_diagnostic():
 
     assert error.value.status == 403
     assert "not authorized" in error.value.description
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (
+            YahooFantasyError(
+                401,
+                'Please provide valid credentials. OAuth oauth_problem="additional_authorization_required"',
+            ),
+            "NOT PROVISIONED",
+        ),
+        (
+            YahooFantasyError(403, "This application is not authorized to perform this action"),
+            "DENIED",
+        ),
+    ],
+)
+def test_cli_formats_fantasy_authorization_diagnostics(error, expected):
+    diagnostic = cli_v09._authorization_diagnostic(error)
+
+    assert diagnostic is not None
+    assert expected in diagnostic[0]
 
 
 def test_list_hockey_leagues_parses_user_collection():
