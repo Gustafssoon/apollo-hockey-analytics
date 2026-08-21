@@ -217,17 +217,24 @@ class NHLStatsAdapter:
         for row in rows:
             raw_player_id = row.get("playerId")
             raw_game_id = row.get("gameId")
-            game_date = _text_value(row, "gameDate")
-            if raw_player_id is None or raw_game_id is None or game_date is None:
+            if raw_player_id is None or raw_game_id is None:
                 continue
 
             key = (int(raw_player_id), int(raw_game_id))
+            game_date = _text_value(row, "gameDate")
+            existing = metadata.get(key)
+            if existing is None and game_date is None:
+                continue
+
             target.setdefault(key, {}).update(_extract_numeric_stats(row, field_map))
             metadata[key] = (
-                game_date,
-                _text_value(row, "teamAbbrev", "teamAbbrevs"),
-                _text_value(row, "opponentTeamAbbrev", "opponentAbbrev"),
-                _text_value(row, "homeRoadCode", "homeRoadFlag", "homeRoad"),
+                game_date or existing[0],
+                _text_value(row, "teamAbbrev", "teamAbbrevs")
+                or (existing[1] if existing else None),
+                _text_value(row, "opponentTeamAbbrev", "opponentAbbrev")
+                or (existing[2] if existing else None),
+                _text_value(row, "homeRoadCode", "homeRoadFlag", "homeRoad")
+                or (existing[3] if existing else None),
             )
 
     @staticmethod
