@@ -73,7 +73,9 @@ NHL Stats REST currently caps positive game-report pages at 100 rows. Apollo the
 
 The batch rows are stored through the same `nhl_game`, `nhl_player_game`, and `nhl_player_game_stat` tables used by targeted `apollo nhl game-log` syncs. No permanent derived-form table is required: Season / Last 30 / Last 14 / Last 7 and waiver trend are calculated from normalized game rows.
 
-Historical players that are not part of Apollo's current roster-derived NHL player pool are skipped safely. Re-running the same recent-form sync replaces each matched player's season game rows rather than creating duplicates.
+A successful league-wide sync should be idempotent: repeated runs against unchanged NHL data return the same report counts and replace matched player-season game rows rather than duplicating them. Completeness is validated from the source report windows before persistence, so hitting a known response ceiling cannot masquerade as a complete season.
+
+Historical players that are not part of Apollo's current roster-derived NHL player pool are skipped safely.
 
 ## Waiver and player value
 
