@@ -9,30 +9,37 @@ from apollo.db import Database
 SEASON = 20252026
 
 
-def _insert_league(database: Database, categories: tuple[str, ...] = ("G", "A")) -> tuple[int, int, int]:
+def _insert_league(
+    database: Database,
+    categories: tuple[str, ...] = ("G", "A"),
+    *,
+    external_id: str = "league-1",
+    name: str = "Test League",
+) -> tuple[int, int, int]:
     database.initialize()
     with database.connect() as connection:
         league_id = int(
             connection.execute(
-                "INSERT INTO league (source, external_id, name) VALUES ('yahoo', 'league-1', 'Test League')"
+                "INSERT INTO league (source, external_id, name) VALUES ('yahoo', ?, ?)",
+                (external_id, name),
             ).lastrowid
         )
         user_team_id = int(
             connection.execute(
                 """
                 INSERT INTO fantasy_team (league_id, external_id, name, is_user_team)
-                VALUES (?, 'team-user', 'User Team', 1)
+                VALUES (?, ?, 'User Team', 1)
                 """,
-                (league_id,),
+                (league_id, f"{external_id}-user"),
             ).lastrowid
         )
         rival_team_id = int(
             connection.execute(
                 """
                 INSERT INTO fantasy_team (league_id, external_id, name, is_user_team)
-                VALUES (?, 'team-rival', 'Rival Team', 0)
+                VALUES (?, ?, 'Rival Team', 0)
                 """,
-                (league_id,),
+                (league_id, f"{external_id}-rival"),
             ).lastrowid
         )
         for label in categories:
@@ -142,7 +149,17 @@ def _seed_need_scenario(database: Database) -> None:
 
 def test_league_profile_reports_supported_and_unsupported_categories(tmp_path):
     database = Database(tmp_path / "apollo.db")
-    _insert_league(database, ("G", "A", "FW"))
+    _, _, rival_team_id = _insert_league(database, ("G", "A", "FW"))
+    _insert_player(
+        database,
+        10,
+        "Rival",
+        "Rostered",
+        "ZZZ",
+        goals=1,
+        assists=1,
+        fantasy_team_id=rival_team_id,
+    )
 
     league = load_league_context(database)
 
@@ -199,3 +216,43 @@ def test_league_waivers_exclude_rostered_and_apply_need_weights(tmp_path):
     assert "Rival Shooter" not in names
     assert names.index("Goal Specialist") < names.index("Assist Specialist")
     assert result.weights == {"G": 2.0, "A": 1.0}
+
+
+def test_league_waivers_ignore_ownership_from_other_leagues(tmp_path):
+    database = Database(tmp_path / "apollo.db")
+    _seed_need_scenario(database)
+    _, other_user_team, _ = _insert_league(
+        database,
+        external_id="league-2",
+        name="Other League",
+    )
+
+    with database.connect() as connection:
+        goal_player_id = int(
+            connection.execute(
+                """
+                SELECT id
+                FROM player
+                WHERE first_name = 'Goal' AND last_name = 'Specialist'
+                """
+            ).fetchone()["id"]
+        )
+        connection.execute(
+            """
+            INSERT INTO roster (fantasy_team_id, player_id, status)
+            VALUES (?, ?, 'active')
+            """,
+            (other_user_team, goal_player_id),
+        )
+
+    result = build_league_waiver_board(
+        database,
+        SEASON,
+        league_external_id="league-1",
+        min_games=1,
+        schedule_weight=0,
+        trend_weight=0,
+        limit=20,
+    )
+
+    assert "Goal Specialist" in [player.name for player in result.board.players]
