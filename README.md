@@ -4,22 +4,7 @@ Apollo is a fantasy hockey analytics platform for league sync, player evaluation
 
 ## Current milestone: v0.7 league-wide recent form
 
-Apollo now combines normalized hockey data, league-wide season category rankings, schedule context, and league-wide game-level recent form into its first actionable fantasy decision layer:
-
-```text
-Mock Yahoo adapter -> normalized league/roster -> SQLite
-NHL roster APIs    -> complete player pool     -> SQLite
-NHL game APIs      -> schedules                -> SQLite
-NHL Stats REST     -> season + game-level stats -> SQLite
-                                                 |
-                                                 v
-                         category value + recent trend + schedule
-                                                 |
-                                                 v
-                                  waiver / streamer value
-```
-
-Yahoo integration will later replace mock roster ownership and generic categories with real league ownership, availability, settings, scoring categories, matchups, draft results, and transactions. NHL data remains an independent hockey-data layer.
+Apollo now combines normalized hockey data, league-wide season category rankings, schedule context, and league-wide game-level recent form into its first actionable fantasy decision layer.
 
 ## Commands
 
