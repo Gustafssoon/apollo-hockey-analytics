@@ -125,10 +125,18 @@ def load_league_context(
         league_id = int(league["id"])
         teams = connection.execute(
             """
-            SELECT id, name, is_user_team
-            FROM fantasy_team
-            WHERE league_id = ?
-            ORDER BY id
+            SELECT ft.id, ft.name, ft.is_user_team
+            FROM fantasy_team ft
+            WHERE ft.league_id = ?
+              AND (
+                  ft.is_user_team = 1
+                  OR EXISTS (
+                      SELECT 1
+                      FROM roster r
+                      WHERE r.fantasy_team_id = ft.id
+                  )
+              )
+            ORDER BY ft.id
             """,
             (league_id,),
         ).fetchall()
@@ -187,8 +195,8 @@ def _roster_ownership(
                 p.first_name || ' ' || p.last_name AS player_name,
                 p.nhl_team
             FROM fantasy_team ft
-            LEFT JOIN roster r ON r.fantasy_team_id = ft.id
-            LEFT JOIN player p ON p.id = r.player_id
+            JOIN roster r ON r.fantasy_team_id = ft.id
+            JOIN player p ON p.id = r.player_id
             WHERE ft.league_id = ?
             ORDER BY ft.id, p.id
             """,
@@ -200,8 +208,6 @@ def _roster_ownership(
     for row in rows:
         team_id = int(row["team_id"])
         team_names[team_id] = str(row["team_name"])
-        if row["player_name"] is None:
-            continue
         ownership[
             _identity_key(
                 str(row["player_name"]),
@@ -251,6 +257,9 @@ def calculate_category_needs(
     league = load_league_context(database, league_external_id)
     ownership, team_names = _roster_ownership(database, league.league_id)
     team_ids = tuple(sorted(team_names))
+    if league.user_team_id not in team_names:
+        raise ValueError("User team has no current roster in stored league data")
+
     category_lookup = {category.label: category for category in league.categories}
     scores: dict[str, dict[int, float]] = {}
 
@@ -435,6 +444,9 @@ def build_league_waiver_board(
         _identity_key(player.name, player.team_abbrev): _weighted_score(player, weights)
         for player in ranking.players
     }
+    ownership, _ = _roster_ownership(database, needs.league.league_id)
+    rostered = set(ownership)
+
     board = build_waiver_board(
         database,
         season,
@@ -446,7 +458,7 @@ def build_league_waiver_board(
         mode=mode,
         min_games=min_games,
         position=position,
-        include_rostered=False,
+        include_rostered=True,
         schedule_weight=schedule_weight,
         trend_weight=trend_weight,
         off_night_threshold=off_night_threshold,
@@ -456,10 +468,10 @@ def build_league_waiver_board(
 
     adjusted: list[WaiverTarget] = []
     for player in board.players:
-        weighted = weighted_scores.get(
-            _identity_key(player.name, player.team_abbrev),
-            player.category_score,
-        )
+        key = _identity_key(player.name, player.team_abbrev)
+        if key in rostered:
+            continue
+        weighted = weighted_scores.get(key, player.category_score)
         total = player.score - player.category_score + weighted
         adjusted.append(
             WaiverTarget(
@@ -468,7 +480,7 @@ def build_league_waiver_board(
                 team_abbrev=player.team_abbrev,
                 position=player.position,
                 games=player.games,
-                rostered=player.rostered,
+                rostered=False,
                 category_score=weighted,
                 schedule_games=player.schedule_games,
                 off_night_games=player.off_night_games,
@@ -489,7 +501,7 @@ def build_league_waiver_board(
             team_abbrev=player.team_abbrev,
             position=player.position,
             games=player.games,
-            rostered=player.rostered,
+            rostered=False,
             category_score=player.category_score,
             schedule_games=player.schedule_games,
             off_night_games=player.off_night_games,
@@ -513,8 +525,8 @@ def build_league_waiver_board(
         start_date=board.start_date,
         end_date=board.end_date,
         days=board.days,
-        include_rostered=board.include_rostered,
-        eligible_players=board.eligible_players,
+        include_rostered=False,
+        eligible_players=len(adjusted),
         schedule_complete=board.schedule_complete,
         schedule_team_count=board.schedule_team_count,
         expected_team_count=board.expected_team_count,
