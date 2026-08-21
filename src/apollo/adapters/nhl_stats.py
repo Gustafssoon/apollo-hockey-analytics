@@ -224,9 +224,13 @@ class NHLStatsAdapter:
 
             raw_total = payload.get("total")
             total = int(raw_total) if isinstance(raw_total, (int, float)) else None
-            if abort_on_total_cap and start == 0 and total is not None:
-                if total >= self.GAME_REPORT_TOTAL_CAP:
-                    return [], total
+            if (
+                abort_on_total_cap
+                and start == 0
+                and total is not None
+                and total >= self.GAME_REPORT_TOTAL_CAP
+            ):
+                return [], total
 
             data = payload.get("data")
             if not isinstance(data, list):
