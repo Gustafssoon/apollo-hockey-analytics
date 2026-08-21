@@ -249,17 +249,19 @@ def test_live_yahoo_sync_reuses_existing_nhl_player_and_replaces_fixture_identit
         "GET",
         f"{BASE_URL}/league/500.l.12345;out=settings,teams",
         200,
-        _league_xml().replace(
-            "<team><team_key>500.l.12345.t.2</team_key><name>Delphi Live</name>"
-            "<is_owned_by_current_login>0</is_owned_by_current_login></team>",
-            "",
-        ).replace('count="2"', 'count="1"'),
+        _league_xml(),
     )
     transport.add(
         "GET",
         f"{BASE_URL}/team/500.l.12345.t.1/roster",
         200,
         _roster_xml("500.l.12345.t.1", "500.p.1", "Connor", "McDavid", "EDM"),
+    )
+    transport.add(
+        "GET",
+        f"{BASE_URL}/team/500.l.12345.t.2/roster",
+        200,
+        _roster_xml("500.l.12345.t.2", "500.p.2", "Nathan", "MacKinnon", "COL"),
     )
     client = YahooFantasyClient(transport=transport)
 
@@ -268,12 +270,16 @@ def test_live_yahoo_sync_reuses_existing_nhl_player_and_replaces_fixture_identit
         YahooLeagueAdapter(client, "access-token", "500.l.12345"),
     )
 
-    assert result.players == 1
+    assert result.players == 2
     with database.connect() as connection:
         count = int(connection.execute("SELECT COUNT(*) AS count FROM player").fetchone()["count"])
         yahoo = connection.execute(
-            "SELECT player_id, external_id FROM player_external_id WHERE provider = 'yahoo'"
+            """
+            SELECT external_id
+            FROM player_external_id
+            WHERE provider = 'yahoo' AND player_id = ?
+            """,
+            (player_id,),
         ).fetchone()
-    assert count == 1
-    assert int(yahoo["player_id"]) == player_id
+    assert count == 2
     assert yahoo["external_id"] == "500.p.1"
