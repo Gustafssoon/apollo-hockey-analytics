@@ -175,6 +175,65 @@ def test_stats_adapter_paginates_and_merges_game_reports():
     assert goalie_stats["savePctg"] == 0.935
 
 
+def test_stats_adapter_handles_live_100_row_game_report_cap():
+    summary_rows = [
+        {
+            "playerId": 1000 + index,
+            "gameId": 5000 + index,
+            "gameDate": f"2026-04-{(index % 20) + 1:02d}",
+            "teamAbbrev": "EDM",
+            "opponentTeamAbbrev": "COL",
+            "points": index % 4,
+            "shots": index % 7,
+        }
+        for index in range(230)
+    ]
+    realtime_rows = [
+        {
+            "playerId": row["playerId"],
+            "gameId": row["gameId"],
+            "hits": 2,
+            "blockedShots": 1,
+        }
+        for row in summary_rows
+    ]
+    starts: dict[str, list[int]] = {"summary": [], "realtime": []}
+
+    def fake_fetch_json(url: str):
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        start = int(query["start"][0])
+        requested_limit = int(query["limit"][0])
+        assert requested_limit <= 100
+        sort = query["sort"][0]
+        assert "gameDate" in sort
+        assert "playerId" in sort
+        if "/skater/summary" in parsed.path:
+            key = "summary"
+            rows = summary_rows
+        elif "/skater/realtime" in parsed.path:
+            key = "realtime"
+            rows = realtime_rows
+        else:
+            raise AssertionError(url)
+        starts[key].append(start)
+        server_limit = min(requested_limit, 100)
+        return {
+            "total": len(rows),
+            "data": rows[start : start + server_limit],
+        }
+
+    adapter = NHLStatsAdapter(fetch_json=fake_fetch_json)
+    rows = adapter.fetch_skater_game_stats(SEASON, page_size=5000)
+
+    assert len(rows) == 230
+    assert starts["summary"] == [0, 100, 200]
+    assert starts["realtime"] == [0, 100, 200]
+    last_stats = {stat.name: stat.value for stat in rows[-1].stats}
+    assert last_stats["hits"] == 2
+    assert last_stats["blockedShots"] == 1
+
+
 def test_recent_form_sync_matches_persists_and_is_idempotent(tmp_path):
     database = Database(tmp_path / "apollo.db")
     database.initialize()
@@ -182,7 +241,7 @@ def test_recent_form_sync_matches_persists_and_is_idempotent(tmp_path):
     _seed_season_stats(database, _player(2, "Bravo", "Wing", "COL", "L"))
 
     class StubAdapter:
-        def fetch_skater_game_stats(self, season, game_type=2, page_size=5000):
+        def fetch_skater_game_stats(self, season, game_type=2, page_size=100):
             assert season == SEASON
             assert game_type == 2
             return (
@@ -192,7 +251,7 @@ def test_recent_form_sync_matches_persists_and_is_idempotent(tmp_path):
                 _game_row(999, 999, "2026-04-10", "OLD", "EDM", points=1),
             )
 
-        def fetch_goalie_game_stats(self, season, game_type=2, page_size=5000):
+        def fetch_goalie_game_stats(self, season, game_type=2, page_size=100):
             return ()
 
     first = sync_nhl_recent_form(database, StubAdapter(), SEASON)
@@ -220,7 +279,7 @@ def test_batch_recent_form_drives_waiver_trend_for_multiple_players(tmp_path):
     _seed_season_stats(database, _player(11, "Recent", "Faller", "COL"))
 
     class StubAdapter:
-        def fetch_skater_game_stats(self, season, game_type=2, page_size=5000):
+        def fetch_skater_game_stats(self, season, game_type=2, page_size=100):
             rows = []
             for index in range(7):
                 game_date = f"2026-04-{index + 1:02d}"
@@ -246,7 +305,7 @@ def test_batch_recent_form_drives_waiver_trend_for_multiple_players(tmp_path):
                 )
             return tuple(rows)
 
-        def fetch_goalie_game_stats(self, season, game_type=2, page_size=5000):
+        def fetch_goalie_game_stats(self, season, game_type=2, page_size=100):
             return ()
 
     sync_nhl_recent_form(database, StubAdapter(), SEASON)
