@@ -1,10 +1,8 @@
 import argparse
-import secrets
 from pathlib import Path
 
 from apollo import cli_v08 as v08_cli
 from apollo.adapters import (
-    YahooConfigurationError,
     YahooCredentials,
     YahooError,
     YahooFantasyClient,
@@ -100,11 +98,10 @@ def _clients(args: argparse.Namespace) -> tuple[YahooOAuthClient, YahooFantasyCl
 def _auth_url(args: argparse.Namespace) -> None:
     credentials = YahooCredentials.load(args.env_file)
     oauth = YahooOAuthClient(credentials, timeout=args.timeout)
-    state = secrets.token_urlsafe(24)
     print("Apollo Yahoo OAuth")
     print()
     print("Open this URL in a browser and authorize the app:")
-    print(oauth.authorization_url(state=state))
+    print(oauth.authorization_url())
     print()
     print(f"Configured redirect URI: {credentials.redirect_uri}")
     print(
@@ -196,5 +193,5 @@ def main(argv: list[str] | None = None) -> None:
             _leagues(args)
         elif args.yahoo_command == "sync":
             _sync(args)
-    except (YahooConfigurationError, YahooFantasyError, YahooError) as error:
+    except YahooError as error:
         raise SystemExit(str(error)) from error
