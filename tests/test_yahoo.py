@@ -1,6 +1,5 @@
 import json
 from collections.abc import Mapping
-from pathlib import Path
 
 import pytest
 
@@ -10,6 +9,7 @@ from apollo.adapters import (
     YahooFantasyError,
     YahooLeagueAdapter,
     YahooOAuthClient,
+    YahooToken,
     YahooTokenStore,
 )
 from apollo.db import Database
@@ -145,6 +145,40 @@ def test_oauth_exchange_stores_tokens_without_credentials(tmp_path):
     assert request[0] == "POST"
     assert request[2]["Authorization"].startswith("Basic ")
     assert b"grant_type=authorization_code" in (request[3] or b"")
+
+
+def test_expired_access_token_refreshes_and_preserves_refresh_token(tmp_path):
+    transport = FakeTransport()
+    transport.add(
+        "POST",
+        TOKEN_URL,
+        200,
+        json.dumps(
+            {
+                "access_token": "access-2",
+                "expires_in": 3600,
+                "token_type": "bearer",
+            }
+        ),
+    )
+    credentials = YahooCredentials("client-id", "client-secret")
+    oauth = YahooOAuthClient(credentials, transport=transport)
+    store = YahooTokenStore(tmp_path / "token.json")
+    store.save(
+        YahooToken(
+            access_token="expired-access",
+            refresh_token="refresh-1",
+            expires_at=0,
+        )
+    )
+
+    access_token = oauth.access_token(store)
+    stored = store.load()
+
+    assert access_token == "access-2"
+    assert stored is not None
+    assert stored.refresh_token == "refresh-1"
+    assert b"grant_type=refresh_token" in (transport.requests[0][3] or b"")
 
 
 def test_fantasy_403_preserves_authorization_diagnostic():
