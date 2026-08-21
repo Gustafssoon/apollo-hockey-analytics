@@ -24,42 +24,18 @@ Yahoo integration will later replace mock roster ownership and generic categorie
 ## Commands
 
 ```powershell
-# Foundation
 apollo init
 apollo sync --source mock
 apollo roster
 apollo nhl sync
 apollo player "Connor McDavid"
-
-# NHL player pool and category data
 apollo nhl pool --season 20252026
 apollo nhl stats --season 20252026
-apollo players --team EDM
-
-# v0.7 league-wide recent form
 apollo nhl recent --season 20252026
 apollo analyze "Macklin Celebrini" --season 20252026
-
-# Targeted player game logs remain available
-apollo nhl game-log "Connor McDavid" --season 20252026
-apollo games "Connor McDavid" --season 20252026 --limit 10
-
-# One-team or league-wide schedules
-apollo nhl schedule EDM --season 20262027
 apollo nhl schedules --season 20262027
-apollo schedule EDM --season 20262027 --limit 20
-
-# Category rankings
 apollo rankings --season 20252026
-apollo rankings --season 20252026 --categories G,A,PPP,SOG,HIT,BLK --mode per-game
-apollo rankings --season 20252026 --type goalie
-apollo leaders --stat SOG --season 20252026 --limit 10
-apollo compare "Connor McDavid" "Nathan MacKinnon" --season 20252026
-
-# Waiver / streamer value
 apollo waivers --season 20252026 --schedule-season 20262027 --as-of 2026-10-07
-apollo waivers --season 20252026 --schedule-season 20262027 --as-of 2026-10-07 --categories HIT,BLK
-apollo waivers --season 20252026 --schedule-season 20262027 --as-of 2026-10-07 --position D
 apollo value "Connor McDavid" --season 20252026 --schedule-season 20262027 --as-of 2026-10-07
 ```
 
@@ -79,71 +55,15 @@ Historical players that are not part of Apollo's current roster-derived NHL play
 
 ## Waiver and player value
 
-`apollo waivers` starts with the category z-score and adds two transparent opportunity signals:
-
-```text
-Apollo value = category Z + schedule_weight * schedule Z + trend_weight * trend signal
-```
-
-The default schedule weight is `1.0`. Schedule opportunity is the number of games in the selected window plus a configurable bonus for games played on off-nights. By default, a date with eight or fewer NHL games is treated as an off-night and each off-night game adds `0.5` opportunity before the schedule z-score is calculated.
-
-The default trend weight is `0.5`. For skaters, Last-7 points per game is compared with the season baseline: at least +10% is `UP`, at most -10% is `DOWN`, otherwise `STABLE`. League-wide v0.7 game data supplies this signal after one batch sync; players without matching stored game rows still receive no fabricated bonus or penalty.
-
-By default the waiver board excludes players currently present in Apollo's `roster` table. Until Yahoo sync is live this only reflects the roster data already stored locally, such as the mock league. `--include-rostered` can be used for a full player-value board. When Yahoo ownership is available, the same boundary will become the real free-agent/waiver pool.
-
-`--categories` makes the engine useful for category needs. For example `--categories HIT,BLK` ranks players specifically for those categories, while `--position D` limits the result to defensemen. `LW`/`RW` are normalized to NHL roster codes `L`/`R`, and `F` matches centers and wings.
+`apollo waivers` starts with the category z-score and adds schedule opportunity plus recent-form trend. By default it excludes players already present in Apollo's stored fantasy rosters. Until Yahoo ownership sync is live this is only a local availability approximation.
 
 ## Schedule safety
 
-`apollo nhl schedules` fetches every NHL team's season schedule and deduplicates games before storing them. The waiver engine checks explicit per-team schedule-sync provenance before assigning schedule value. If only one or a few team schedules are stored, the schedule component is disabled for everyone rather than treating missing teams as having zero games.
+`apollo nhl schedules` fetches every NHL team's season schedule and deduplicates games before storing them. The waiver engine only enables schedule scoring when full team coverage is recorded.
 
-Once full coverage is present, Apollo counts regular-season games only. Schedule density and off-night value are calculated from the shared `nhl_game` table, so the same game is never counted twice even though both teams' schedules contain it.
+## Category rankings
 
-## Category stat coverage and rankings
-
-`apollo nhl stats` uses NHL Stats REST reports rather than making one player request at a time. Skater summary data provides games played, goals, assists, points, power-play points, shots, plus/minus, penalty minutes, and time on ice. The realtime report adds hits, blocked shots, takeaways, and giveaways. Goalie summary data adds games played, starts, wins, losses, overtime losses, saves, shots against, goals against, save percentage, goals-against average, and shutouts.
-
-`apollo rankings` calculates category z-scores across eligible players and sums them into an overall score. The default skater categories are `G,A,PPP,SOG,HIT,BLK`; the default goalie categories are `W,SV%,GAA,SHO`. Lower goals-against average is automatically treated as better. Rankings default to per-game rates with a 10-game minimum, while `--mode total` is available for accumulated season value.
-
-The current goalie model is intentionally provisional: wins are normalized by games played in per-game mode, so workload and relief appearances can distort value. A later revision should add games-started and reliability/workload weighting.
-
-## Rolling analytics
-
-`apollo analyze` reads stored per-game data and computes the full stored regular season plus Last 30, Last 14, and Last 7 windows. The trend signal compares the player's Last-7 rate with the stored season baseline.
-
-League-wide v0.7 game data includes scoring, shooting, HIT, and BLK for matched skaters, so rolling peripheral windows no longer depend on targeted individual game-log coverage after a successful recent-form sync.
-
-## NHL data model
-
-NHL IDs remain provider identities attached to Apollo's normalized `player` records. Schedule games are stored once in `nhl_game`. Player game context is stored in `nhl_player_game`, with per-game numeric statistics in `nhl_player_game_stat`. Season category data remains in `nhl_player_season_stat`.
-
-Derived rankings, rolling windows, and waiver values are recalculated from normalized stored data rather than persisted as permanent derived tables. This lets the scoring model evolve without schema churn.
-
-## Architecture
-
-```text
-Yahoo API (later)                 NHL public APIs
-       |                                |
-       v                                v
-  Yahoo adapter              roster / game / stats adapters
-       |                                |
-       +---------------+----------------+
-                       v
-                normalized models
-                       |
-                       v
-                    SQLite
-                       |
-                       v
-                 analytics engine
-                       |
-        +--------------+--------------+
-        v              v              v
-     waivers         trades        lineups
-                       |
-                       v
-                    Apollo AI
-```
+`apollo rankings` calculates category z-scores across eligible players. Default skater categories are `G,A,PPP,SOG,HIT,BLK`; default goalie categories are `W,SV%,GAA,SHO`. The goalie model remains provisional because workload/reliability is not yet fully modeled.
 
 ## Development
 
