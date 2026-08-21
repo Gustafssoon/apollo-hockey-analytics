@@ -34,8 +34,8 @@ def build_parser() -> argparse.ArgumentParser:
     recent_parser.add_argument(
         "--page-size",
         type=int,
-        default=5000,
-        help="Stats REST page size for game-level reports",
+        default=100,
+        help="Stats REST game-report page size (NHL API caps pages at 100)",
     )
     recent_parser.add_argument("--timeout", type=float, default=20.0)
     return parser
