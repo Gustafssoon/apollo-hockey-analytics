@@ -103,12 +103,17 @@ def sync_league(database: Database, adapter: LeagueAdapter) -> SyncResult:
             snapshot.name,
         )
 
+        # League categories are current configuration, not historical rows. Replace them
+        # on every sync so removed Yahoo categories cannot keep affecting league scoring.
+        connection.execute(
+            "DELETE FROM league_stat_category WHERE league_id = ?",
+            (league_id,),
+        )
         for category in snapshot.stat_categories:
             connection.execute(
                 """
                 INSERT INTO league_stat_category (league_id, abbr, display_name)
                 VALUES (?, ?, ?)
-                ON CONFLICT(league_id, abbr) DO UPDATE SET display_name = excluded.display_name
                 """,
                 (league_id, category.abbr, category.display_name),
             )
