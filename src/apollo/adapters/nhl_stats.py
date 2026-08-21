@@ -45,6 +45,14 @@ def _text_value(row: dict[str, Any], *keys: str) -> str | None:
 
 class NHLStatsAdapter:
     STATS_BASE_URL = "https://api.nhle.com/stats/rest/en"
+    GAME_REPORT_PAGE_CAP = 100
+    GAME_REPORT_SORT = json.dumps(
+        [
+            {"property": "gameDate", "direction": "DESC"},
+            {"property": "playerId", "direction": "ASC"},
+        ],
+        separators=(",", ":"),
+    )
 
     SKATER_SUMMARY_FIELDS: ClassVar[dict[str, str]] = {
         "gamesPlayed": "gamesPlayed",
@@ -146,13 +154,14 @@ class NHLStatsAdapter:
     ) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         start = 0
-        limit = max(1, page_size)
+        limit = min(max(1, page_size), self.GAME_REPORT_PAGE_CAP)
 
         while True:
             params = urlencode(
                 {
                     "isAggregate": "false",
                     "isGame": "true",
+                    "sort": self.GAME_REPORT_SORT,
                     "start": start,
                     "limit": limit,
                     "cayenneExp": f"seasonId={season} and gameTypeId={game_type}",
@@ -169,11 +178,15 @@ class NHLStatsAdapter:
             if not isinstance(data, list):
                 break
             page = [row for row in data if isinstance(row, dict)]
+            if not page:
+                break
             rows.extend(page)
 
             raw_total = payload.get("total")
             total = int(raw_total) if isinstance(raw_total, (int, float)) else None
-            if not page or (total is not None and len(rows) >= total) or len(page) < limit:
+            if total is not None and len(rows) >= total:
+                break
+            if total is None and len(page) < limit:
                 break
             start += len(page)
 
@@ -221,12 +234,12 @@ class NHLStatsAdapter:
                 continue
 
             key = (int(raw_player_id), int(raw_game_id))
+            target.setdefault(key, {}).update(_extract_numeric_stats(row, field_map))
+
             game_date = _text_value(row, "gameDate")
             existing = metadata.get(key)
-            if existing is None and game_date is None:
+            if game_date is None and existing is None:
                 continue
-
-            target.setdefault(key, {}).update(_extract_numeric_stats(row, field_map))
             metadata[key] = (
                 game_date or existing[0],
                 _text_value(row, "teamAbbrev", "teamAbbrevs")
@@ -246,7 +259,10 @@ class NHLStatsAdapter:
     ) -> tuple[NHLPlayerGameData, ...]:
         lines: list[NHLPlayerGameData] = []
         for (player_id, game_id), stats in sorted(stats_by_game.items()):
-            game_date, team_abbrev, opponent_abbrev, home_road = metadata[(player_id, game_id)]
+            game_metadata = metadata.get((player_id, game_id))
+            if game_metadata is None:
+                continue
+            game_date, team_abbrev, opponent_abbrev, home_road = game_metadata
             lines.append(
                 NHLPlayerGameData(
                     nhl_player_id=player_id,
@@ -309,7 +325,7 @@ class NHLStatsAdapter:
         self,
         season: int,
         game_type: int = 2,
-        page_size: int = 5000,
+        page_size: int = 100,
     ) -> tuple[NHLPlayerGameData, ...]:
         stats_by_game: dict[tuple[int, int], dict[str, float]] = {}
         metadata: dict[
@@ -337,7 +353,7 @@ class NHLStatsAdapter:
         self,
         season: int,
         game_type: int = 2,
-        page_size: int = 5000,
+        page_size: int = 100,
     ) -> tuple[NHLPlayerGameData, ...]:
         stats_by_game: dict[tuple[int, int], dict[str, float]] = {}
         metadata: dict[
