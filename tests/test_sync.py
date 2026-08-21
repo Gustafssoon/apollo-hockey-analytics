@@ -2,6 +2,7 @@ from pathlib import Path
 
 from apollo.adapters import MockYahooAdapter
 from apollo.db import Database
+from apollo.models import LeagueSnapshot, StatCategorySnapshot, TeamSnapshot
 from apollo.services import sync_league
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "mock_league.json"
@@ -48,3 +49,46 @@ def test_second_sync_replaces_current_roster_but_keeps_history(tmp_path):
 
     assert current_count == 6
     assert snapshot_count == 12
+
+
+def test_sync_replaces_removed_league_categories(tmp_path):
+    database = Database(tmp_path / "apollo.db")
+
+    class StubAdapter:
+        def __init__(self, categories: tuple[str, ...]) -> None:
+            self.categories = categories
+
+        def fetch_league(self) -> LeagueSnapshot:
+            return LeagueSnapshot(
+                source="yahoo",
+                external_id="category-sync",
+                name="Category Sync League",
+                teams=(
+                    TeamSnapshot(
+                        external_id="team-1",
+                        name="User Team",
+                        is_user_team=True,
+                        players=(),
+                    ),
+                ),
+                stat_categories=tuple(
+                    StatCategorySnapshot(abbr=label, display_name=label)
+                    for label in self.categories
+                ),
+            )
+
+    sync_league(database, StubAdapter(("G", "A")))
+    sync_league(database, StubAdapter(("G",)))
+
+    with database.connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT lsc.abbr
+            FROM league_stat_category lsc
+            JOIN league l ON l.id = lsc.league_id
+            WHERE l.external_id = 'category-sync'
+            ORDER BY lsc.id
+            """
+        ).fetchall()
+
+    assert [str(row["abbr"]) for row in rows] == ["G"]
