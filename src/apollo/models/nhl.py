@@ -40,3 +40,13 @@ class NHLGameLogEntry:
     opponent_abbrev: str | None
     home_road: str | None
     stats: tuple[NHLStat, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class NHLPlayerGameData:
+    nhl_player_id: int
+    game: NHLGame
+    team_abbrev: str | None
+    opponent_abbrev: str | None
+    home_road: str | None
+    stats: tuple[NHLStat, ...]
