@@ -1,6 +1,7 @@
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, ClassVar
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -43,13 +44,40 @@ def _text_value(row: dict[str, Any], *keys: str) -> str | None:
     return None
 
 
+def _next_month(value: date) -> date:
+    if value.month == 12:
+        return date(value.year + 1, 1, 1)
+    return date(value.year, value.month + 1, 1)
+
+
+def _season_month_windows(season: int) -> tuple[tuple[str, str], ...]:
+    text = str(season)
+    if len(text) != 8:
+        raise ValueError(f"Invalid NHL season id: {season}")
+    start_year = int(text[:4])
+    end_year = int(text[4:])
+    if end_year != start_year + 1:
+        raise ValueError(f"Invalid NHL season id: {season}")
+
+    current = date(start_year, 9, 1)
+    stop = date(end_year, 7, 1)
+    windows: list[tuple[str, str]] = []
+    while current < stop:
+        following = _next_month(current)
+        windows.append((current.isoformat(), following.isoformat()))
+        current = following
+    return tuple(windows)
+
+
 class NHLStatsAdapter:
     STATS_BASE_URL = "https://api.nhle.com/stats/rest/en"
     GAME_REPORT_PAGE_CAP = 100
+    GAME_REPORT_TOTAL_CAP = 10000
     GAME_REPORT_SORT = json.dumps(
         [
             {"property": "gameDate", "direction": "DESC"},
             {"property": "playerId", "direction": "ASC"},
+            {"property": "gameId", "direction": "ASC"},
         ],
         separators=(",", ":"),
     )
@@ -144,36 +172,62 @@ class NHLStatsAdapter:
             return []
         return [row for row in data if isinstance(row, dict)]
 
-    def _fetch_game_report(
+    def _game_report_url(
         self,
         player_type: str,
         report: str,
-        season: int,
-        game_type: int,
+        cayenne_expression: str,
+        *,
+        start: int,
+        limit: int,
+    ) -> str:
+        params = urlencode(
+            {
+                "isAggregate": "false",
+                "isGame": "true",
+                "sort": self.GAME_REPORT_SORT,
+                "start": start,
+                "limit": limit,
+                "cayenneExp": cayenne_expression,
+            }
+        )
+        return f"{self.STATS_BASE_URL}/{player_type}/{report}?{params}"
+
+    def _paginate_game_report(
+        self,
+        player_type: str,
+        report: str,
+        cayenne_expression: str,
         page_size: int,
-    ) -> list[dict[str, Any]]:
+        *,
+        abort_on_total_cap: bool = False,
+    ) -> tuple[list[dict[str, Any]], int | None]:
         rows: list[dict[str, Any]] = []
         start = 0
         limit = min(max(1, page_size), self.GAME_REPORT_PAGE_CAP)
+        total: int | None = None
 
         while True:
-            params = urlencode(
-                {
-                    "isAggregate": "false",
-                    "isGame": "true",
-                    "sort": self.GAME_REPORT_SORT,
-                    "start": start,
-                    "limit": limit,
-                    "cayenneExp": f"seasonId={season} and gameTypeId={game_type}",
-                }
-            )
             payload = self._fetch_json(
-                f"{self.STATS_BASE_URL}/{player_type}/{report}?{params}"
+                self._game_report_url(
+                    player_type,
+                    report,
+                    cayenne_expression,
+                    start=start,
+                    limit=limit,
+                )
             )
             if not isinstance(payload, dict):
                 raise TypeError(
                     f"Unexpected NHL game stats response for {player_type}/{report}"
                 )
+
+            raw_total = payload.get("total")
+            total = int(raw_total) if isinstance(raw_total, (int, float)) else None
+            if abort_on_total_cap and start == 0 and total is not None:
+                if total >= self.GAME_REPORT_TOTAL_CAP:
+                    return [], total
+
             data = payload.get("data")
             if not isinstance(data, list):
                 break
@@ -182,15 +236,104 @@ class NHLStatsAdapter:
                 break
             rows.extend(page)
 
-            raw_total = payload.get("total")
-            total = int(raw_total) if isinstance(raw_total, (int, float)) else None
             if total is not None and len(rows) >= total:
                 break
             if total is None and len(page) < limit:
                 break
             start += len(page)
 
+        return rows, total
+
+    def _fetch_game_report_window(
+        self,
+        player_type: str,
+        report: str,
+        cayenne_expression: str,
+        page_size: int,
+    ) -> list[dict[str, Any]]:
+        payload = self._fetch_json(
+            self._game_report_url(
+                player_type,
+                report,
+                cayenne_expression,
+                start=0,
+                limit=-1,
+            )
+        )
+        if not isinstance(payload, dict):
+            raise TypeError(
+                f"Unexpected NHL game stats response for {player_type}/{report}"
+            )
+        data = payload.get("data")
+        page = [row for row in data if isinstance(row, dict)] if isinstance(data, list) else []
+        raw_total = payload.get("total")
+        total = int(raw_total) if isinstance(raw_total, (int, float)) else None
+
+        if total is not None and total >= self.GAME_REPORT_TOTAL_CAP:
+            raise RuntimeError(
+                f"NHL game report window still hit the {self.GAME_REPORT_TOTAL_CAP}-row cap: "
+                f"{cayenne_expression}"
+            )
+        if total is None or len(page) >= total:
+            return page
+
+        rows, _ = self._paginate_game_report(
+            player_type,
+            report,
+            cayenne_expression,
+            page_size,
+        )
         return rows
+
+    @staticmethod
+    def _deduplicate_game_report_rows(
+        rows: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        keyed: dict[tuple[int, int], dict[str, Any]] = {}
+        unkeyed: list[dict[str, Any]] = []
+        for row in rows:
+            raw_player_id = row.get("playerId")
+            raw_game_id = row.get("gameId")
+            if raw_player_id is None or raw_game_id is None:
+                unkeyed.append(row)
+                continue
+            keyed[(int(raw_player_id), int(raw_game_id))] = row
+        return list(keyed.values()) + unkeyed
+
+    def _fetch_game_report(
+        self,
+        player_type: str,
+        report: str,
+        season: int,
+        game_type: int,
+        page_size: int,
+    ) -> list[dict[str, Any]]:
+        base_expression = f"seasonId={season} and gameTypeId={game_type}"
+        rows, total = self._paginate_game_report(
+            player_type,
+            report,
+            base_expression,
+            page_size,
+            abort_on_total_cap=True,
+        )
+        if total is None or total < self.GAME_REPORT_TOTAL_CAP:
+            return rows
+
+        partitioned: list[dict[str, Any]] = []
+        for window_start, window_end in _season_month_windows(season):
+            expression = (
+                f'{base_expression} and gameDate>="{window_start}" '
+                f'and gameDate<"{window_end}"'
+            )
+            partitioned.extend(
+                self._fetch_game_report_window(
+                    player_type,
+                    report,
+                    expression,
+                    page_size,
+                )
+            )
+        return self._deduplicate_game_report_rows(partitioned)
 
     @staticmethod
     def _merge_report(
