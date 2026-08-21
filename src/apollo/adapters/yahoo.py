@@ -143,6 +143,8 @@ class YahooOAuthClient:
             "redirect_uri": self.credentials.redirect_uri,
             "response_type": "code",
             "language": "en-us",
+            "scope": "fspt-r",
+            "prompt": "consent",
         }
         if state:
             params["state"] = state
