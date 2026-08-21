@@ -27,7 +27,8 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#   Usually these files are written by a python script from a template before PyInstaller builds the exe, so as to inject date/other infos into it.
+#   Usually these files are written by a python script from a template
+#   before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -103,7 +104,7 @@ ipython_config.py
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-lock-file
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 # poetry.lock
 # poetry.toml
 
@@ -216,8 +217,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Apollo local databases and OAuth state
+# Apollo local databases
 *.db
 *.db-shm
 *.db-wal
+
+# Apollo local OAuth state
 .apollo/
