@@ -2,11 +2,17 @@
 
 Apollo is a fantasy hockey analytics platform for league sync, player evaluation, waiver analysis, matchup optimization, and AI-assisted decision support.
 
-## Current milestone: v0.8 league-specific fantasy intelligence
+## Current milestone: v0.9 live Yahoo league sync
 
-Apollo now uses the fantasy league configuration already stored in SQLite as an analytics input. Instead of always assuming generic categories, league-aware commands resolve the selected league's categories, compare the user's roster with the other current rosters, identify weak categories, and weight player value toward those needs.
+Apollo can now authenticate directly with Yahoo OAuth 2.0 and translate a read-only Yahoo Fantasy Hockey league into the same normalized league/settings/ownership model that the v0.8 analytics engine already uses.
 
-Yahoo API access can later populate the same normalized league/settings/ownership layer directly; the v0.8 analytics engine does not depend on live Yahoo credentials.
+The live integration intentionally separates three states:
+
+1. Yahoo OAuth authentication succeeds.
+2. The Yahoo Fantasy API authorizes the application.
+3. A selected Fantasy Hockey league is normalized and synced into Apollo.
+
+This distinction matters because a valid OAuth token does not itself prove that the application has been provisioned for Fantasy API access. `apollo yahoo status` makes that boundary explicit and reports HTTP 403 authorization denial separately from OAuth failure.
 
 ## Commands
 
@@ -20,42 +26,128 @@ apollo nhl stats --season 20252026
 apollo nhl recent --season 20252026
 apollo nhl schedules --season 20262027
 
-# Generic analytics remain available
+# Generic analytics
 apollo analyze "Macklin Celebrini" --season 20252026
 apollo rankings --season 20252026
 apollo waivers --season 20252026 --schedule-season 20262027 --as-of 2026-10-07
 
-# v0.8 league-aware intelligence
+# League-aware intelligence
 apollo league profile
 apollo league needs --season 20252026
 apollo league rankings --season 20252026 --type skater --limit 20
 apollo league waivers --season 20252026 --schedule-season 20262027 --as-of 2026-10-07 --limit 20
+
+# v0.9 live Yahoo integration
+apollo yahoo auth-url
+apollo yahoo exchange --code "<ONE-TIME-CODE>"
+apollo yahoo status
+apollo yahoo leagues
+apollo yahoo sync --league-key "<YAHOO-LEAGUE-KEY>"
 ```
 
-If more than one league is stored, pass `--league-id <external-id>` to the `apollo league` commands.
+Season IDs used by NHL analytics use the eight-digit NHL format, for example `20252026` for 2025-26. The optional `apollo yahoo leagues --season 2026` filter uses Yahoo's fantasy season year.
 
-Season IDs use the NHL eight-digit format, for example `20252026` for 2025-26.
+## Yahoo setup
 
-## v0.8 league profile and category support
+Create a local `.env` from `.env.example` and fill in the credentials from your own Yahoo Developer application:
 
-`apollo league profile` reads `league`, `fantasy_team`, `roster`, and `league_stat_category`. It reports the selected league, user team, current team count, and which configured categories Apollo can currently evaluate.
+```text
+YAHOO_CONSUMER_KEY=your-client-id
+YAHOO_CONSUMER_SECRET=your-client-secret
+YAHOO_REDIRECT_URI=https://localhost:8080
+```
 
-Current supported categories are:
+The redirect URI must match the Yahoo application registration. `.env` is ignored by Git and must never be committed.
+
+Apollo does not depend on YFPY or another Yahoo wrapper. The OAuth and Fantasy requests are implemented directly with Python's standard library so Apollo keeps its MIT licensing boundary and has no runtime dependency on a GPL Yahoo client.
+
+## Yahoo OAuth flow
+
+Run:
+
+```powershell
+apollo yahoo auth-url
+```
+
+Open the printed Yahoo authorization URL in a browser and approve access. Yahoo redirects to the configured redirect URI. For the default localhost URI the page itself does not need to load; copy the one-time `code` query parameter from the browser address bar, then exchange it:
+
+```powershell
+apollo yahoo exchange --code "<ONE-TIME-CODE>"
+```
+
+Apollo stores access and refresh tokens locally in `.apollo/yahoo-token.json`. The client secret is not written to that token file, tokens are never printed by the CLI, and `.apollo/` is ignored by Git. Expired access tokens are refreshed automatically when a refresh token is available.
+
+Check the two authorization layers with:
+
+```powershell
+apollo yahoo status
+```
+
+A healthy integration reports both an available OAuth token and an authorized Fantasy API. If Yahoo accepts OAuth but returns HTTP 403 from the Fantasy endpoint, Apollo reports `Fantasy API: DENIED (HTTP 403)` instead of treating the OAuth flow as broken. Fantasy API access may require separate Yahoo approval/provisioning outside Apollo.
+
+## Discover and sync the live league
+
+Once `apollo yahoo status` reports Fantasy API authorization, list the Fantasy Hockey leagues visible to the current Yahoo login:
+
+```powershell
+apollo yahoo leagues
+```
+
+Optionally filter by Yahoo fantasy season:
+
+```powershell
+apollo yahoo leagues --season 2026
+```
+
+Then sync the selected league key:
+
+```powershell
+apollo yahoo sync --league-key "<YAHOO-LEAGUE-KEY>"
+```
+
+The live adapter imports:
+
+- league identity and name
+- current scoring categories
+- fantasy teams and the team owned by the current login
+- current team rosters/ownership
+- Yahoo player keys, names, NHL team abbreviations, and a normalized primary position
+
+The sync feeds the existing `league`, `fantasy_team`, `league_stat_category`, `roster`, and `roster_snapshot` model. No separate live-Yahoo analytics path is required.
+
+A Yahoo player is reconciled to an existing Apollo player when the NHL-backed identity is uniquely resolvable by name and NHL team. This lets a database previously seeded by the mock adapter transition to live Yahoo player keys without duplicating already matched NHL players. Historical roster snapshots remain attached to Apollo's internal player ID.
+
+After sync, select the live Yahoo league explicitly if the database also contains the mock league:
+
+```powershell
+apollo league profile --league-id "<YAHOO-LEAGUE-KEY>"
+apollo league needs --league-id "<YAHOO-LEAGUE-KEY>" --season 20252026
+apollo league rankings --league-id "<YAHOO-LEAGUE-KEY>" --season 20252026 --type skater
+apollo league waivers --league-id "<YAHOO-LEAGUE-KEY>" --season 20252026 --schedule-season 20262027 --as-of 2026-10-07
+```
+
+## Yahoo attribution
+
+Any product surface displaying Yahoo Fantasy data should include the attribution:
+
+**Fantasy data provided by Yahoo Fantasy** — https://sports.yahoo.com/fantasy/
+
+The CLI includes this attribution after live Yahoo league/listing output. A future graphical UI must also follow Yahoo's current developer branding and attribution requirements.
+
+## League-specific fantasy intelligence
+
+`apollo league profile` reports the selected league, user team, current team count, and which configured categories Apollo can currently evaluate.
+
+Supported categories are:
 
 ```text
 Skaters: G, A, P, PPP, SOG, HIT, BLK, PIM, +/-
 Goalies: W, SV, SV%, GAA, SHO
 ```
 
-A Yahoo category that is not yet supported, such as `FW`, remains visible in the profile but is excluded from scoring instead of being silently approximated. This makes missing stat coverage explicit and gives later milestones a clear list of categories to add.
+Unsupported league categories remain visible but are excluded from scoring rather than silently approximated.
 
-League categories are current configuration rather than historical data. `sync_league` therefore replaces the stored category set on each sync so a category removed from Yahoo cannot keep affecting Apollo scoring.
-
-## Category needs
-
-`apollo league needs` builds category-level player z-scores from the NHL season data and sums the z-scores of players currently rostered by each fantasy team. The user's team is then ranked against the other current teams in every supported league category.
-
-The first need weighting is deliberately transparent:
+`apollo league needs` sums category-level player z-scores for each current fantasy roster and ranks the user's team against the league. Need weights are transparent:
 
 ```text
 best team in category  -> weight 1.00
@@ -63,23 +155,13 @@ middle of league       -> weight around 1.50
 worst team in category -> weight 2.00
 ```
 
-Need levels are shown as `LOW`, `MEDIUM`, or `HIGH`. This is a roster-strength model, not yet a live head-to-head matchup projection.
-
-## League-aware rankings
-
-`apollo league rankings` starts with the same category z-scores as the generic rankings, but multiplies each category by the user's current need weight before summing them.
+League-aware player value is:
 
 ```text
 League player value = Σ(category z-score × category need weight)
 ```
 
-The output also shows the unweighted `RAW` category score so it is visible when Apollo is moving a player up specifically because that player fills a roster need.
-
-Skaters and goalies are ranked separately because their category distributions and the current goalie reliability model are different.
-
-## League-aware waivers
-
-`apollo league waivers` combines the need-weighted category score with the already validated v0.6/v0.7 schedule and recent-form layers:
+League-aware waiver value is:
 
 ```text
 Apollo league waiver value
@@ -88,17 +170,9 @@ Apollo league waiver value
     + trend_weight × recent-form signal
 ```
 
-Availability is scoped to the selected league. A player owned in another stored league is still treated as available in the selected league. Current roster ownership is used; historical `roster_snapshot` rows do not make a player unavailable.
+## NHL data foundation
 
-Until live Yahoo sync is available, ownership is only as current as the stored league sync.
-
-## v0.7 league-wide recent form
-
-`apollo nhl recent` uses NHL Stats REST game-level reports (`isGame=true`) to populate normalized player-game rows league-wide. NHL's 100-row page cap and 10,000-row season-report ceiling are handled with deterministic pagination and monthly date partitioning. A full 2025-26 live validation produced 47,230 skater game rows, 2,768 goalie game rows, and all 1,312 regular-season games, with identical counts on a repeated sync.
-
-Season / Last 30 / Last 14 / Last 7 and waiver trend are calculated from normalized stored game rows rather than permanent derived tables.
-
-## Schedule safety
+`apollo nhl recent` uses NHL Stats REST game-level reports to populate normalized player-game rows league-wide. NHL's observed 100-row page cap and 10,000-row season-report ceiling are handled with deterministic pagination and monthly date partitioning. A full 2025-26 live validation produced 47,230 skater game rows, 2,768 goalie game rows, and all 1,312 regular-season games, with identical counts on a repeated sync.
 
 `apollo nhl schedules` fetches every NHL team's season schedule and deduplicates games before storing them. Schedule scoring is disabled unless full team coverage is recorded, preventing unsynced teams from being treated as having zero games.
 
@@ -114,8 +188,8 @@ pytest -q
 ruff check .
 ```
 
-The NHL adapters use public NHL endpoints and do not require credentials.
+The NHL adapters use public NHL endpoints and do not require credentials. Yahoo integration requires the user's own Yahoo Developer application credentials and whatever Fantasy API access Yahoo has provisioned for that application.
 
 ## Security
 
-Never commit Yahoo credentials, OAuth tokens, private league exports, local SQLite databases, or `.env` files. These local artifacts are excluded from version control.
+Never commit Yahoo credentials, OAuth tokens, private league exports, local SQLite databases, or `.env` files. `.env`, `.apollo/`, and local database files are excluded from version control.
