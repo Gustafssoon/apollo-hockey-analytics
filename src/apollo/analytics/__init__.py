@@ -1,3 +1,16 @@
+from apollo.analytics.league import (
+    CategoryNeed,
+    CategoryNeeds,
+    LeagueCategory,
+    LeagueContext,
+    LeagueRankedPlayer,
+    LeagueRanking,
+    LeagueWaiverBoard,
+    build_league_ranking,
+    build_league_waiver_board,
+    calculate_category_needs,
+    load_league_context,
+)
 from apollo.analytics.player import PlayerAnalysis, WindowSummary, analyze_player
 from apollo.analytics.rankings import (
     CategorySpec,
@@ -13,7 +26,14 @@ from apollo.analytics.rankings import (
 from apollo.analytics.waivers import WaiverBoard, WaiverTarget, build_waiver_board, get_player_value
 
 __all__ = [
+    "CategoryNeed",
+    "CategoryNeeds",
     "CategorySpec",
+    "LeagueCategory",
+    "LeagueContext",
+    "LeagueRankedPlayer",
+    "LeagueRanking",
+    "LeagueWaiverBoard",
     "PlayerAnalysis",
     "PlayerComparison",
     "RankedPlayer",
@@ -23,10 +43,14 @@ __all__ = [
     "WaiverTarget",
     "WindowSummary",
     "analyze_player",
+    "build_league_ranking",
+    "build_league_waiver_board",
     "build_waiver_board",
+    "calculate_category_needs",
     "compare_players",
     "get_player_value",
     "leaderboard",
+    "load_league_context",
     "rank_players",
     "resolve_categories",
 ]
