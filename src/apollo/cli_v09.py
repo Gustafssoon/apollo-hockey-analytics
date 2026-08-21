@@ -95,6 +95,35 @@ def _clients(args: argparse.Namespace) -> tuple[YahooOAuthClient, YahooFantasyCl
     return oauth, fantasy, YahooTokenStore(args.token_file)
 
 
+def _authorization_diagnostic(error: YahooFantasyError) -> tuple[str, str] | None:
+    if error.status == 401 and "additional_authorization_required" in error.description:
+        return (
+            "Fantasy API: NOT PROVISIONED (HTTP 401)",
+            "Yahoo accepted the OAuth token, but this application has not been granted "
+            "Fantasy API authorization. Fantasy access is provisioned to the Yahoo app "
+            "through Yahoo's Fantasy API approval process; it cannot be added by requesting "
+            "an arbitrary OAuth scope in the authorization URL.",
+        )
+    if error.status == 403:
+        return (
+            "Fantasy API: DENIED (HTTP 403)",
+            "Yahoo accepted the OAuth flow but the application is not currently authorized "
+            "for Fantasy API access. This can indicate pending approval or Yahoo allowlist "
+            "provisioning.",
+        )
+    return None
+
+
+def _print_authorization_diagnostic(error: YahooFantasyError) -> bool:
+    diagnostic = _authorization_diagnostic(error)
+    if diagnostic is None:
+        return False
+    title, explanation = diagnostic
+    print(title)
+    print(explanation)
+    return True
+
+
 def _auth_url(args: argparse.Namespace) -> None:
     credentials = YahooCredentials.load(args.env_file)
     oauth = YahooOAuthClient(credentials, timeout=args.timeout)
@@ -132,22 +161,7 @@ def _status(args: argparse.Namespace) -> None:
     try:
         fantasy.probe(access_token)
     except YahooFantasyError as error:
-        if error.status == 401 and "additional_authorization_required" in error.description:
-            print("Fantasy API: NOT PROVISIONED (HTTP 401)")
-            print(
-                "Yahoo accepted the OAuth token, but this application has not been granted "
-                "Fantasy API authorization. Fantasy access is provisioned to the Yahoo app "
-                "through Yahoo's Fantasy API approval process; it cannot be added by requesting "
-                "an arbitrary OAuth scope in the authorization URL."
-            )
-            return
-        if error.status == 403:
-            print("Fantasy API: DENIED (HTTP 403)")
-            print(
-                "Yahoo accepted the OAuth flow but the application is not currently authorized "
-                "for Fantasy API access. This can indicate pending approval or Yahoo allowlist "
-                "provisioning."
-            )
+        if _print_authorization_diagnostic(error):
             return
         raise
     print("Fantasy API: authorized")
@@ -202,5 +216,9 @@ def main(argv: list[str] | None = None) -> None:
             _leagues(args)
         elif args.yahoo_command == "sync":
             _sync(args)
+    except YahooFantasyError as error:
+        if _print_authorization_diagnostic(error):
+            raise SystemExit(2) from error
+        raise SystemExit(str(error)) from error
     except YahooError as error:
         raise SystemExit(str(error)) from error
