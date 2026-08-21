@@ -10,14 +10,14 @@ class NHLRecentFormAdapter(Protocol):
         self,
         season: int,
         game_type: int = 2,
-        page_size: int = 5000,
+        page_size: int = 100,
     ) -> tuple[NHLPlayerGameData, ...]: ...
 
     def fetch_goalie_game_stats(
         self,
         season: int,
         game_type: int = 2,
-        page_size: int = 5000,
+        page_size: int = 100,
     ) -> tuple[NHLPlayerGameData, ...]: ...
 
 
@@ -47,7 +47,7 @@ def sync_nhl_recent_form(
     adapter: NHLRecentFormAdapter,
     season: int,
     game_type: int = 2,
-    page_size: int = 5000,
+    page_size: int = 100,
 ) -> NHLRecentFormSyncResult:
     database.initialize()
     skaters = adapter.fetch_skater_game_stats(season, game_type, page_size)
