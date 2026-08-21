@@ -132,6 +132,15 @@ def _status(args: argparse.Namespace) -> None:
     try:
         fantasy.probe(access_token)
     except YahooFantasyError as error:
+        if error.status == 401 and "additional_authorization_required" in error.description:
+            print("Fantasy API: NOT PROVISIONED (HTTP 401)")
+            print(
+                "Yahoo accepted the OAuth token, but this application has not been granted "
+                "Fantasy API authorization. Fantasy access is provisioned to the Yahoo app "
+                "through Yahoo's Fantasy API approval process; it cannot be added by requesting "
+                "an arbitrary OAuth scope in the authorization URL."
+            )
+            return
         if error.status == 403:
             print("Fantasy API: DENIED (HTTP 403)")
             print(
