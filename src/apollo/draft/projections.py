@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 MODEL_VERSION = "apollo-skater-baseline-v0.1"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
