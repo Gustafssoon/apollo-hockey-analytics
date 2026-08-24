@@ -18,6 +18,12 @@ from apollo.draft.config import (
     ScoringConfig,
     load_draft_config,
 )
+from apollo.draft.gp_backtest import (
+    GPBacktestPlayer,
+    GPBacktestResult,
+    GPStrategyResult,
+    build_gp_backtest_result,
+)
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
     MODEL_VERSION,
@@ -42,6 +48,9 @@ __all__ = [
     "DraftLeagueConfig",
     "DraftPick",
     "DraftSettings",
+    "GPBacktestPlayer",
+    "GPBacktestResult",
+    "GPStrategyResult",
     "LeagueConfig",
     "ProjectionBacktestResult",
     "ProjectionError",
@@ -52,6 +61,7 @@ __all__ = [
     "SkaterProjection",
     "TopKOverlap",
     "build_backtest_result",
+    "build_gp_backtest_result",
     "build_skater_projection",
     "draft_picks",
     "load_draft_config",
