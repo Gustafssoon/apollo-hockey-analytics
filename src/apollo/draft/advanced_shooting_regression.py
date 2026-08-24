@@ -59,6 +59,7 @@ class ShootingRegressionAggregateStrategy:
     strength: float | None
     metrics: tuple[ShootingRegressionAggregateMetric, ...]
     points_improved_years: int
+    worst_points_mae_gain: float
     top25_overlap_rate: float
 
 
@@ -272,14 +273,14 @@ def build_shooting_regression_aggregate_result(
                     weighted_rho=rho,
                 )
             )
-        points_improved_years = sum(
-            _metric(strategy, "points").mae < _metric(baseline, "points").mae
+        year_gains = [
+            _metric(baseline, "points").mae - _metric(strategy, "points").mae
             for strategy, baseline in zip(
                 season_strategies,
                 baseline_season_strategies,
                 strict=True,
             )
-        )
+        ]
         top25 = _weighted(
             [
                 (
@@ -300,7 +301,8 @@ def build_shooting_regression_aggregate_result(
                 scope=first.scope,
                 strength=first.strength,
                 metrics=tuple(metrics),
-                points_improved_years=points_improved_years,
+                points_improved_years=sum(gain > 0 for gain in year_gains),
+                worst_points_mae_gain=min(year_gains),
                 top25_overlap_rate=float(top25),
             )
         )
