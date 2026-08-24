@@ -10,7 +10,6 @@ from apollo.draft import (
     snake_overall_pick,
 )
 
-
 VALID_CONFIG = """\
 league:
   name: Apollo Test League
