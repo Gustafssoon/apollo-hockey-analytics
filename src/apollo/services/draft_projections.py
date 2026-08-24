@@ -17,6 +17,7 @@ def project_skater(
     if not player_name:
         raise ProjectionError("Player name must not be empty")
 
+    database.initialize()
     source_seasons = previous_seasons(target_season)
     placeholders = ", ".join("?" for _ in source_seasons)
 
