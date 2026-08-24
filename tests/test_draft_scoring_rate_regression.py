@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 from apollo import cli_v30
@@ -110,3 +112,52 @@ def test_rate_priors_are_weighted_by_5v5_toi_exposure_and_cli_contract():
     assert args.command == "draft"
     assert args.draft_command == "scoring-rate-regression-summary"
     assert args.season == 20252026
+
+
+def test_scoring_rate_summary_cli_uses_aggregate_metric_fields(monkeypatch, capsys):
+    def metric(stat_name: str, mae: float, rho: float):
+        return SimpleNamespace(stat_name=stat_name, weighted_mae=mae, weighted_rho=rho)
+
+    baseline = SimpleNamespace(
+        strategy_name="baseline_v05",
+        metrics=(
+            metric("points", 9.90, 0.830),
+            metric("goals", 4.80, 0.840),
+            metric("assists", 6.88, 0.790),
+        ),
+        points_improved_years=0,
+        worst_points_mae_gain=0.0,
+        top25_overlap_rate=0.587,
+    )
+    candidate = SimpleNamespace(
+        strategy_name="g60_10",
+        metrics=(
+            metric("points", 9.80, 0.831),
+            metric("goals", 4.70, 0.842),
+            metric("assists", 6.88, 0.790),
+        ),
+        points_improved_years=3,
+        worst_points_mae_gain=0.02,
+        top25_overlap_rate=0.587,
+    )
+    aggregate = SimpleNamespace(
+        target_seasons=(20252026, 20242025, 20232024),
+        player_seasons=1141,
+        baseline_player_seasons=1141,
+        strategies=(baseline, candidate),
+    )
+    monkeypatch.setattr(
+        cli_v30,
+        "run_scoring_rate_regression_aggregate",
+        lambda *args, **kwargs: aggregate,
+    )
+
+    cli_v30.main(
+        ["draft", "scoring-rate-regression-summary", "--season", "20252026", "--years", "3"]
+    )
+    output = capsys.readouterr().out
+
+    assert "g60_10" in output
+    assert "9.800" in output
+    assert "+0.100" in output
+    assert "baseline_v05" in output
