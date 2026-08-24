@@ -1,5 +1,6 @@
 from apollo.services.draft_backtest import run_skater_backtest
 from apollo.services.draft_projections import project_skater
+from apollo.services.gp_backtest import run_gp_baseline_backtest
 from apollo.services.nhl_catalog import (
     NHLGameLogSyncResult,
     NHLLeagueScheduleSyncResult,
@@ -25,6 +26,7 @@ __all__ = [
     "NHLSyncResult",
     "SyncResult",
     "project_skater",
+    "run_gp_baseline_backtest",
     "run_skater_backtest",
     "sync_league",
     "sync_nhl_category_stats",
