@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import date
 
 from apollo.db import Database
 from apollo.draft.backtest import BacktestPlayer, ProjectionBacktestResult, build_backtest_result
@@ -40,12 +41,15 @@ def run_skater_backtest(
                 p.last_name,
                 p.primary_position,
                 p.nhl_team,
+                profile.birth_date,
                 ns.season,
                 ns.stat_name,
                 ns.value
             FROM player p
             JOIN player_external_id nhl
                 ON nhl.player_id = p.id AND nhl.provider = 'nhl'
+            LEFT JOIN nhl_player_profile profile
+                ON profile.player_id = p.id
             JOIN nhl_player_season_stat ns
                 ON ns.player_id = p.id
             WHERE ns.game_type = 2
@@ -56,7 +60,7 @@ def run_skater_backtest(
             seasons,
         ).fetchall()
 
-    player_meta: dict[int, tuple[str, str, str | None, str]] = {}
+    player_meta: dict[int, tuple[str, str, str | None, str, str | None]] = {}
     stats_by_player: dict[int, dict[int, dict[str, float]]] = defaultdict(
         lambda: defaultdict(dict)
     )
@@ -67,6 +71,7 @@ def run_skater_backtest(
             str(row["last_name"]),
             row["nhl_team"],
             str(row["primary_position"] or ""),
+            row["birth_date"],
         )
         stats_by_player[player_id][int(row["season"])][str(row["stat_name"])] = float(
             row["value"]
@@ -106,8 +111,15 @@ def run_skater_backtest(
         if usable_history_seasons < min_history_seasons:
             continue
 
-        first_name, last_name, team_abbrev, position = player_meta[player_id]
+        first_name, last_name, team_abbrev, position, birth_date_text = player_meta[player_id]
         player_name = f"{first_name} {last_name}"
+        birth_date: date | None = None
+        if birth_date_text:
+            try:
+                birth_date = date.fromisoformat(str(birth_date_text))
+            except ValueError:
+                skipped_incomplete_history += 1
+                continue
         try:
             projection = build_skater_projection(
                 player_id=player_id,
@@ -116,6 +128,7 @@ def run_skater_backtest(
                 position=position,
                 target_season=target_season,
                 history=tuple(history),
+                birth_date=birth_date,
             )
         except ProjectionError:
             skipped_incomplete_history += 1

@@ -1,17 +1,9 @@
 from dataclasses import dataclass
 from math import sqrt
 
+from apollo.draft.aging import AgeCurve as AgeCurveStrategy, adjust_rate_between_ages
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
 from apollo.draft.projections import ProjectionError
-
-
-@dataclass(frozen=True, slots=True)
-class AgeCurveStrategy:
-    name: str
-    forward_peak_age: float
-    defense_peak_age: float
-    pre_peak_slope: float
-    post_peak_slope: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,20 +46,6 @@ AGE_CURVE_STRATEGIES = (
 )
 
 
-def _curve_level(
-    age: float,
-    *,
-    peak_age: float,
-    pre_peak_slope: float,
-    post_peak_slope: float,
-) -> float:
-    if age <= peak_age:
-        value = 1.0 - pre_peak_slope * (peak_age - age)
-    else:
-        value = 1.0 - post_peak_slope * (age - peak_age)
-    return max(0.50, value)
-
-
 def age_adjusted_rate(
     *,
     observed_rate: float,
@@ -76,22 +54,13 @@ def age_adjusted_rate(
     position: str,
     strategy: AgeCurveStrategy,
 ) -> float:
-    if strategy.name == "neutral":
-        return observed_rate
-    peak_age = strategy.defense_peak_age if position.upper() == "D" else strategy.forward_peak_age
-    source_level = _curve_level(
-        source_age,
-        peak_age=peak_age,
-        pre_peak_slope=strategy.pre_peak_slope,
-        post_peak_slope=strategy.post_peak_slope,
+    return adjust_rate_between_ages(
+        observed_rate=observed_rate,
+        source_age=source_age,
+        target_age=target_age,
+        position=position,
+        curve=strategy,
     )
-    target_level = _curve_level(
-        target_age,
-        peak_age=peak_age,
-        pre_peak_slope=strategy.pre_peak_slope,
-        post_peak_slope=strategy.post_peak_slope,
-    )
-    return observed_rate * target_level / source_level
 
 
 def _top_k_overlaps(

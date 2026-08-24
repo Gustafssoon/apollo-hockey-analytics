@@ -6,7 +6,12 @@ from apollo.draft.projections import ProjectionError, previous_seasons
 from apollo.services.draft_projections import project_skater
 
 
-def _insert_skater(database: Database, *, position: str = "C") -> int:
+def _insert_skater(
+    database: Database,
+    *,
+    position: str = "C",
+    birth_date: str | None = "1997-01-13",
+) -> int:
     database.initialize()
     with database.connect() as connection:
         cursor = connection.execute(
@@ -24,6 +29,15 @@ def _insert_skater(database: Database, *, position: str = "C") -> int:
             """,
             (player_id,),
         )
+        if birth_date is not None:
+            connection.execute(
+                """
+                INSERT INTO nhl_player_profile (
+                    player_id, is_active, team_abbrev, position, sweater_number, birth_date, fetched_at
+                ) VALUES (?, 1, 'EDM', ?, 97, ?, '2026-08-24T00:00:00Z')
+                """,
+                (player_id, position, birth_date),
+            )
     return player_id
 
 
@@ -61,8 +75,8 @@ def _insert_season(
         )
 
 
-def _seed_three_seasons(database: Database) -> None:
-    player_id = _insert_skater(database)
+def _seed_three_seasons(database: Database, *, birth_date: str | None = "1997-01-13") -> None:
+    player_id = _insert_skater(database, birth_date=birth_date)
     _insert_season(
         database,
         player_id,
@@ -105,22 +119,23 @@ def test_previous_seasons_for_target_season():
     assert previous_seasons(20262027) == (20252026, 20242025, 20232024)
 
 
-def test_three_season_skater_projection_uses_weighted_rates_and_availability(tmp_path):
+def test_three_season_skater_projection_uses_availability_and_age_adjusted_rates(tmp_path):
     database = Database(tmp_path / "apollo.db")
     _seed_three_seasons(database)
 
     projection = project_skater(database, "Connor McDavid", 20262027)
 
     assert projection.projected_games == pytest.approx(78.5)
-    assert projection.stats["goals"] == pytest.approx(35.325)
-    assert projection.stats["assists"] == pytest.approx(70.65)
-    assert projection.stats["powerPlayPoints"] == pytest.approx(35.325)
-    assert projection.stats["shots"] == pytest.approx(235.5)
-    assert projection.stats["hits"] == pytest.approx(78.5)
-    assert projection.stats["blockedShots"] == pytest.approx(39.25)
+    assert projection.stats["goals"] == pytest.approx(34.3869636553)
+    assert projection.stats["assists"] == pytest.approx(68.7739273106)
+    assert projection.stats["powerPlayPoints"] == pytest.approx(34.3869636553)
+    assert projection.stats["shots"] == pytest.approx(228.9947383646)
+    assert projection.stats["hits"] == pytest.approx(76.3315794549)
+    assert projection.stats["blockedShots"] == pytest.approx(38.1657897274)
     assert projection.source_seasons == (20252026, 20242025, 20232024)
-    assert projection.model_version == "apollo-skater-baseline-v0.2"
+    assert projection.model_version == "apollo-skater-baseline-v0.3"
     assert projection.availability_model_version == "apollo-availability-shrink50-v0.1"
+    assert projection.age_model_version == "apollo-age-medium-v0.1"
 
 
 def test_missing_latest_season_keeps_calendar_weights(tmp_path):
@@ -154,8 +169,20 @@ def test_missing_latest_season_keeps_calendar_weights(tmp_path):
     projection = project_skater(database, "Connor McDavid", 20262027)
 
     assert projection.projected_games == pytest.approx(74.75)
-    assert projection.stats["goals"] == pytest.approx(28.03125)
+    assert projection.stats["goals"] == pytest.approx(26.9466017080)
     assert projection.source_seasons == (20242025, 20232024)
+
+
+def test_projection_falls_back_to_neutral_rates_without_birth_date(tmp_path):
+    database = Database(tmp_path / "apollo.db")
+    _seed_three_seasons(database, birth_date=None)
+
+    projection = project_skater(database, "Connor McDavid", 20262027)
+
+    assert projection.projected_games == pytest.approx(78.5)
+    assert projection.stats["goals"] == pytest.approx(35.325)
+    assert projection.stats["assists"] == pytest.approx(70.65)
+    assert projection.age_model_version is None
 
 
 def test_projection_rejects_goalies_for_v01(tmp_path):
@@ -195,11 +222,12 @@ def test_draft_project_cli(tmp_path, capsys):
     assert "Connor McDavid | C | EDM" in output
     assert "Target season: 2026-27" in output
     assert "Projected GP   78.5" in output
-    assert "G              35.3" in output
-    assert "A              70.6" in output
+    assert "G              34.4" in output
+    assert "A              68.8" in output
     assert "Source seasons: 2025-26, 2024-25, 2023-24" in output
-    assert "apollo-skater-baseline-v0.2" in output
+    assert "apollo-skater-baseline-v0.3" in output
     assert "apollo-availability-shrink50-v0.1" in output
+    assert "apollo-age-medium-v0.1" in output
 
 
 def test_existing_draft_config_command_still_routes_through_v11(tmp_path, capsys):

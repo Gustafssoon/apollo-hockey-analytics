@@ -1,12 +1,14 @@
 from dataclasses import dataclass
+from datetime import date
 
+from apollo.draft.aging import AGE_MODEL_VERSION, adjust_rate_for_seasons
 from apollo.draft.availability import (
     AVAILABILITY_MODEL_VERSION,
     AvailabilityError,
     project_available_games,
 )
 
-MODEL_VERSION = "apollo-skater-baseline-v0.2"
+MODEL_VERSION = "apollo-skater-baseline-v0.3"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
     "goals",
@@ -41,6 +43,7 @@ class SkaterProjection:
     source_seasons: tuple[int, ...]
     model_version: str = MODEL_VERSION
     availability_model_version: str = AVAILABILITY_MODEL_VERSION
+    age_model_version: str | None = None
 
 
 def _season_years(season: int) -> tuple[int, int]:
@@ -77,6 +80,7 @@ def build_skater_projection(
     position: str,
     target_season: int,
     history: tuple[ProjectionSeason, ...],
+    birth_date: date | None = None,
     season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
 ) -> SkaterProjection:
     if not history:
@@ -109,12 +113,19 @@ def build_skater_projection(
             value = season.stats.get(stat_name)
             if value is None:
                 continue
-            rate_values.append(
-                (
-                    value / season.games_played,
-                    weights_by_season[season.season],
-                )
-            )
+            rate = value / season.games_played
+            if birth_date is not None:
+                try:
+                    rate = adjust_rate_for_seasons(
+                        observed_rate=rate,
+                        birth_date=birth_date,
+                        source_season=season.season,
+                        target_season=target_season,
+                        position=position,
+                    )
+                except ValueError as exc:
+                    raise ProjectionError(str(exc)) from exc
+            rate_values.append((rate, weights_by_season[season.season]))
         if not rate_values:
             raise ProjectionError(
                 f"Missing historical stat '{stat_name}' for {player_name}"
@@ -130,4 +141,5 @@ def build_skater_projection(
         projected_games=projected_games,
         stats=projected_stats,
         source_seasons=tuple(season.season for season in usable),
+        age_model_version=(AGE_MODEL_VERSION if birth_date is not None else None),
     )

@@ -1,3 +1,5 @@
+from datetime import date
+
 from apollo.db import Database
 from apollo.draft.projections import (
     ProjectionError,
@@ -29,10 +31,13 @@ def project_skater(
                 p.first_name,
                 p.last_name,
                 p.primary_position,
-                p.nhl_team
+                p.nhl_team,
+                profile.birth_date
             FROM player p
             JOIN player_external_id nhl
                 ON nhl.player_id = p.id AND nhl.provider = 'nhl'
+            LEFT JOIN nhl_player_profile profile
+                ON profile.player_id = p.id
             WHERE LOWER(p.first_name || ' ' || p.last_name) = LOWER(?)
             """,
             (player_name,),
@@ -46,7 +51,7 @@ def project_skater(
         player = players[0]
         position = str(player["primary_position"] or "")
         if position.upper() == "G":
-            raise ProjectionError("Goalie projections are not implemented in baseline v0.1")
+            raise ProjectionError("Goalie projections are not implemented")
 
         rows = connection.execute(
             f"""
@@ -63,6 +68,13 @@ def project_skater(
     full_name = f"{player['first_name']} {player['last_name']}"
     if not rows:
         raise ProjectionError(f"No historical NHL season data available for {full_name}")
+
+    birth_date: date | None = None
+    if player["birth_date"]:
+        try:
+            birth_date = date.fromisoformat(str(player["birth_date"]))
+        except ValueError as exc:
+            raise ProjectionError(f"Invalid birth date for {full_name}: {player['birth_date']}") from exc
 
     by_season: dict[int, dict[str, float]] = {}
     for row in rows:
@@ -87,4 +99,5 @@ def project_skater(
         position=position,
         target_season=target_season,
         history=tuple(history),
+        birth_date=birth_date,
     )
