@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from apollo import cli_v10
-from apollo.draft import DraftConfigError, draft_picks, load_draft_config, snake_overall_pick
+from apollo.draft import draft_picks, DraftConfigError, load_draft_config, snake_overall_pick
 
 
 VALID_CONFIG = """\
