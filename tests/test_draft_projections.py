@@ -133,10 +133,11 @@ def test_three_season_skater_projection_uses_availability_and_age_adjusted_rates
     assert projection.stats["hits"] == pytest.approx(76.3315794549)
     assert projection.stats["blockedShots"] == pytest.approx(38.1657897274)
     assert projection.source_seasons == (20252026, 20242025, 20232024)
-    assert projection.model_version == "apollo-skater-baseline-v0.4"
+    assert projection.model_version == "apollo-skater-baseline-v0.5"
     assert projection.availability_model_version == "apollo-availability-shrink50-v0.1"
     assert projection.age_model_version == "apollo-age-medium-v0.1"
     assert projection.regression_model_version == "apollo-regression-points-robust-v0.1"
+    assert projection.shooting_context_model_version is None
 
 
 def test_missing_latest_season_keeps_calendar_weights(tmp_path):
@@ -173,6 +174,7 @@ def test_missing_latest_season_keeps_calendar_weights(tmp_path):
     assert projection.stats["goals"] == pytest.approx(26.9466017080)
     assert projection.source_seasons == (20242025, 20232024)
     assert projection.regression_model_version == "apollo-regression-points-robust-v0.1"
+    assert projection.shooting_context_model_version is None
 
 
 def test_projection_falls_back_to_neutral_rates_without_birth_date(tmp_path):
@@ -186,6 +188,7 @@ def test_projection_falls_back_to_neutral_rates_without_birth_date(tmp_path):
     assert projection.stats["assists"] == pytest.approx(70.65)
     assert projection.age_model_version is None
     assert projection.regression_model_version == "apollo-regression-points-robust-v0.1"
+    assert projection.shooting_context_model_version is None
 
 
 def test_projection_rejects_goalies_for_v01(tmp_path):
@@ -228,10 +231,11 @@ def test_draft_project_cli(tmp_path, capsys):
     assert "G              34.4" in output
     assert "A              68.8" in output
     assert "Source seasons: 2025-26, 2024-25, 2023-24" in output
-    assert "apollo-skater-baseline-v0.4" in output
+    assert "apollo-skater-baseline-v0.5" in output
     assert "apollo-availability-shrink50-v0.1" in output
     assert "apollo-age-medium-v0.1" in output
     assert "apollo-regression-points-robust-v0.1" in output
+    assert "Shooting context: not applied (context unavailable)" in output
 
 
 def test_existing_draft_config_command_still_routes_through_v11(tmp_path, capsys):
