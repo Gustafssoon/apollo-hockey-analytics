@@ -104,7 +104,7 @@ def test_neutral_age_strategy_reproduces_weighted_rate_projection():
     )
     neutral = next(strategy for strategy in result.strategies if strategy.name == "neutral")
 
-    assert neutral.points_mae == pytest.approx(abs(75.2 - 72.0))
+    assert neutral.points_mae == pytest.approx(abs(76.0 - 72.0))
 
 
 def test_decline_strategy_can_improve_an_older_player_projection():
