@@ -1,5 +1,6 @@
 SHOOTING_CONTEXT_MODEL_VERSION = "apollo-shooting-context-sh-offense10-v0.1"
 SHOOTING_CONTEXT_STRENGTH = 0.10
+SHOOTING_CONTEXT_REQUIRED_SEASONS = 3
 SHOOTING_CONTEXT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 MIN_CORRECTION_FACTOR = 0.80
 MAX_CORRECTION_FACTOR = 1.20
@@ -17,7 +18,7 @@ def correction_factor(context_ratio: float, strength: float = SHOOTING_CONTEXT_S
 def build_shooting_context_ratio(
     history: tuple[tuple[float, float], ...],
     *,
-    min_signal_seasons: int = 3,
+    min_signal_seasons: int = SHOOTING_CONTEXT_REQUIRED_SEASONS,
     season_weights: tuple[float, ...] = SHOOTING_CONTEXT_SEASON_WEIGHTS,
 ) -> float | None:
     if len(history) > len(season_weights):
