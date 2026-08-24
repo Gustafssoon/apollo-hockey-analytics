@@ -60,6 +60,10 @@ def project_skater(
             (player["id"], *source_seasons),
         ).fetchall()
 
+    full_name = f"{player['first_name']} {player['last_name']}"
+    if not rows:
+        raise ProjectionError(f"No historical NHL season data available for {full_name}")
+
     by_season: dict[int, dict[str, float]] = {}
     for row in rows:
         season = int(row["season"])
@@ -76,7 +80,6 @@ def project_skater(
             )
         )
 
-    full_name = f"{player['first_name']} {player['last_name']}"
     return build_skater_projection(
         player_id=int(player["id"]),
         player_name=full_name,
