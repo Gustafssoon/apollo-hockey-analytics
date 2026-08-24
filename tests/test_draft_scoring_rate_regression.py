@@ -1,6 +1,7 @@
 import pytest
 
 from apollo import cli_v30
+from apollo.draft.projections import ProjectionError
 from apollo.draft.scoring_rate_regression import (
     ScoringRateRegressionPlayer,
     build_rate_context_ratio,
@@ -17,6 +18,9 @@ def _metric(strategy, stat_name: str):
 def test_rate_correction_factor_uses_small_mean_reversion():
     assert correction_factor(1.20, 0.10) == pytest.approx(0.98)
     assert correction_factor(0.80, 0.10) == pytest.approx(1.02)
+    assert correction_factor(0.0, 0.10) == pytest.approx(1.10)
+    with pytest.raises(ProjectionError, match="non-negative"):
+        correction_factor(-0.01, 0.10)
 
 
 def test_rate_context_ratio_uses_calendar_weights_and_requires_three_seasons():
@@ -24,6 +28,7 @@ def test_rate_context_ratio_uses_calendar_weights_and_requires_three_seasons():
 
     assert build_rate_context_ratio(history) == pytest.approx(1.09)
     assert build_rate_context_ratio(history[:2]) is None
+    assert build_rate_context_ratio(((0.0, 1.0), (0.0, 1.0), (0.0, 1.0))) == pytest.approx(0.0)
 
 
 def test_secondary_assist_signal_is_distinct_from_total_assist_signal():
