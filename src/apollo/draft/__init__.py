@@ -19,10 +19,10 @@ from apollo.draft.config import (
     load_draft_config,
 )
 from apollo.draft.gp_backtest import (
+    STANDARD_NHL_GAMES,
     GPBacktestPlayer,
     GPBacktestResult,
     GPStrategyResult,
-    STANDARD_NHL_GAMES,
     build_gp_backtest_result,
     normalize_games_to_82,
     regular_season_game_limit,
