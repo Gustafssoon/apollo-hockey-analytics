@@ -2,6 +2,10 @@ from apollo.services.advanced_pdo_backtest import (
     run_advanced_pdo_aggregate,
     run_advanced_pdo_backtest,
 )
+from apollo.services.advanced_shooting_regression import (
+    run_shooting_regression_aggregate,
+    run_shooting_regression_backtest,
+)
 from apollo.services.advanced_signal_backtest import (
     run_advanced_signal_aggregate,
     run_advanced_signal_backtest,
@@ -52,6 +56,8 @@ __all__ = [
     "run_age_stat_backtest",
     "run_deployment_backtest",
     "run_gp_baseline_backtest",
+    "run_shooting_regression_aggregate",
+    "run_shooting_regression_backtest",
     "run_skater_backtest",
     "sync_league",
     "sync_nhl_advanced_stats",
