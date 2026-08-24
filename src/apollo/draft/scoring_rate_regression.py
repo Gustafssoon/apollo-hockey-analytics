@@ -75,8 +75,8 @@ class ScoringRateRegressionAggregateResult:
 
 
 def correction_factor(context_ratio: float, strength: float) -> float:
-    if context_ratio <= 0:
-        raise ProjectionError("Scoring-rate context ratio must be positive")
+    if context_ratio < 0:
+        raise ProjectionError("Scoring-rate context ratio must be non-negative")
     if strength < 0:
         raise ProjectionError("Scoring-rate correction strength must be non-negative")
     factor = 1.0 - strength * (context_ratio - 1.0)
