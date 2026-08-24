@@ -1,3 +1,4 @@
+from apollo.services.advanced_stats import NHLAdvancedStatsSyncResult, sync_nhl_advanced_stats
 from apollo.services.age_backtest import run_age_baseline_backtest
 from apollo.services.age_model_backtest import run_age_model_aggregate, run_age_model_backtest
 from apollo.services.age_stat_aggregate import run_age_stat_aggregate
@@ -22,6 +23,7 @@ from apollo.services.season_stats import NHLCategoryStatsSyncResult, sync_nhl_ca
 from apollo.services.sync import SyncResult, sync_league
 
 __all__ = [
+    "NHLAdvancedStatsSyncResult",
     "NHLCategoryStatsSyncResult",
     "NHLGameLogSyncResult",
     "NHLLeagueScheduleSyncResult",
@@ -40,6 +42,7 @@ __all__ = [
     "run_gp_baseline_backtest",
     "run_skater_backtest",
     "sync_league",
+    "sync_nhl_advanced_stats",
     "sync_nhl_category_stats",
     "sync_nhl_game_log",
     "sync_nhl_player_pool",
