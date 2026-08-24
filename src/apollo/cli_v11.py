@@ -68,6 +68,8 @@ def _draft_project(args: argparse.Namespace) -> None:
     print(f"Age: {age_model}")
     regression_model = projection.regression_model_version or "not applied (priors unavailable)"
     print(f"Regression: {regression_model}")
+    shooting_model = projection.shooting_context_model_version or "not applied (context unavailable)"
+    print(f"Shooting context: {shooting_model}")
 
 
 def main(argv: list[str] | None = None) -> None:
