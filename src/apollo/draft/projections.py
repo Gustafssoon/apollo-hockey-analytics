@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-MODEL_VERSION = "apollo-skater-baseline-v0.1"
+from apollo.draft.availability import (
+    AVAILABILITY_MODEL_VERSION,
+    AvailabilityError,
+    project_available_games,
+)
+
+MODEL_VERSION = "apollo-skater-baseline-v0.2"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
     "goals",
@@ -34,6 +40,7 @@ class SkaterProjection:
     stats: dict[str, float]
     source_seasons: tuple[int, ...]
     model_version: str = MODEL_VERSION
+    availability_model_version: str = AVAILABILITY_MODEL_VERSION
 
 
 def _season_years(season: int) -> tuple[int, int]:
@@ -87,15 +94,13 @@ def build_skater_projection(
         if index < len(season_weights)
     }
 
-    projected_games = min(
-        82.0,
-        _weighted_average(
-            [
-                (season.games_played, weights_by_season[season.season])
-                for season in usable
-            ]
-        ),
-    )
+    try:
+        projected_games = project_available_games(
+            tuple((season.season, season.games_played) for season in history),
+            season_weights,
+        )
+    except AvailabilityError as exc:
+        raise ProjectionError(str(exc)) from exc
 
     projected_stats: dict[str, float] = {}
     for stat_name in SKATER_PROJECTION_STATS:
