@@ -7,6 +7,11 @@ from apollo.draft.age_backtest import (
     age_adjusted_rate,
     build_age_backtest_result,
 )
+from apollo.draft.age_stat_aggregate import (
+    AgeStatAggregateStrategy,
+    AgeStatAggregateSummary,
+    build_age_stat_aggregate_summary,
+)
 from apollo.draft.age_stat_backtest import (
     AGE_STAT_NAMES,
     AgeStatBacktestPlayer,
@@ -76,6 +81,8 @@ __all__ = [
     "AgeBacktestPlayer",
     "AgeBacktestResult",
     "AgeCurveStrategy",
+    "AgeStatAggregateStrategy",
+    "AgeStatAggregateSummary",
     "AgeStatBacktestPlayer",
     "AgeStatBacktestResult",
     "AgeStatHistorySeason",
@@ -102,6 +109,7 @@ __all__ = [
     "TopKOverlap",
     "age_adjusted_rate",
     "build_age_backtest_result",
+    "build_age_stat_aggregate_summary",
     "build_age_stat_backtest_result",
     "build_backtest_result",
     "build_gp_backtest_result",
