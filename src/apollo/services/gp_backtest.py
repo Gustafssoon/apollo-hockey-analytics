@@ -1,7 +1,13 @@
 from collections import defaultdict
 
 from apollo.db import Database
-from apollo.draft.gp_backtest import GPBacktestPlayer, GPBacktestResult, build_gp_backtest_result
+from apollo.draft.gp_backtest import (
+    GPBacktestPlayer,
+    GPBacktestResult,
+    build_gp_backtest_result,
+    normalize_games_to_82,
+    regular_season_game_limit,
+)
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
     SKATER_PROJECTION_STATS,
@@ -20,6 +26,8 @@ def run_gp_baseline_backtest(
 ) -> GPBacktestResult:
     if min_actual_games < 1:
         raise ProjectionError("min_actual_games must be >= 1")
+    if regular_season_game_limit(target_season) != 82:
+        raise ProjectionError("GP baseline shootout currently requires an 82-game target season")
 
     database.initialize()
     source_seasons = previous_seasons(target_season, len(DEFAULT_SEASON_WEIGHTS))
@@ -86,7 +94,7 @@ def run_gp_baseline_backtest(
             if games_played <= 0:
                 complete_history = False
                 break
-            history_games.append(games_played)
+            history_games.append(normalize_games_to_82(season, games_played))
             history.append(
                 ProjectionSeason(
                     season=season,
