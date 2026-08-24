@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
 from apollo.draft.projections import ProjectionError
-from apollo.draft.shooting_context import build_shooting_context_ratio, correction_factor
+from apollo.draft.shooting_context import correction_factor
 
 CORRECTION_STRENGTHS = (0.10, 0.25, 0.50)
 CORRECTION_SCOPES = ("goals", "offense")
