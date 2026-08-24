@@ -222,15 +222,15 @@ def run_v05_candidate_backtest(
             )
         )
 
-    common = dict(
-        target_season=target_season,
-        source_seasons=source_seasons,
-        actual_eligible_players=actual_eligible_players,
-        min_actual_games=min_actual_games,
-        min_history_seasons=min_history_seasons,
-        history_counts=tuple(sorted(history_counts.items())),
-        skipped_incomplete_history=skipped_incomplete_history,
-    )
+    common = {
+        "target_season": target_season,
+        "source_seasons": source_seasons,
+        "actual_eligible_players": actual_eligible_players,
+        "min_actual_games": min_actual_games,
+        "min_history_seasons": min_history_seasons,
+        "history_counts": tuple(sorted(history_counts.items())),
+        "skipped_incomplete_history": skipped_incomplete_history,
+    }
     baseline = build_backtest_result(
         players=tuple(baseline_players),
         **common,
