@@ -1,7 +1,5 @@
 from collections.abc import Iterable
 
-from apollo.draft.projections import SKATER_PROJECTION_STATS
-
 REGRESSION_MODEL_VERSION = "apollo-regression-points-robust-v0.1"
 REGRESSION_PSEUDO_GAMES_BY_STAT = {
     "goals": 5.0,
@@ -11,6 +9,7 @@ REGRESSION_PSEUDO_GAMES_BY_STAT = {
     "hits": 0.0,
     "blockedShots": 10.0,
 }
+REGRESSION_STATS = tuple(REGRESSION_PSEUDO_GAMES_BY_STAT)
 
 
 def position_group(position: str) -> str:
@@ -26,7 +25,7 @@ def build_position_priors(
         if games_played <= 0:
             continue
         group = position_group(position)
-        for stat_name in SKATER_PROJECTION_STATS:
+        for stat_name in REGRESSION_STATS:
             value = stats.get(stat_name)
             if value is None:
                 continue
@@ -49,11 +48,11 @@ def regress_rate(
 ) -> tuple[float, bool]:
     if games_played <= 0:
         raise ValueError("games_played must be > 0")
-    raw_rate = value / games_played
-    if pseudo_games <= 0 or prior_rate is None:
-        return raw_rate, False
     if pseudo_games < 0:
         raise ValueError("pseudo_games must be >= 0")
+    raw_rate = value / games_played
+    if pseudo_games == 0 or prior_rate is None:
+        return raw_rate, False
     return (
         (value + prior_rate * pseudo_games) / (games_played + pseudo_games),
         True,
