@@ -34,6 +34,29 @@ class NHLAdvancedStatsAdapter(NHLStatsAdapter):
         "secondaryAssists5v5": "secondaryAssists5v5",
         "secondaryAssistsPer605v5": "secondaryAssistsPer605v5",
     }
+    SKATER_SHOT_TYPE_FIELDS: ClassVar[dict[str, str]] = {
+        "goals": "shotTypeGoals",
+        "shots": "shotTypeShots",
+        "shootingPct": "shotTypeShootingPct",
+        "shotsOnNetBackhand": "shotsOnNetBackhand",
+        "goalsBackhand": "goalsBackhand",
+        "shootingPctBackhand": "shootingPctBackhand",
+        "shotsOnNetSlap": "shotsOnNetSlap",
+        "goalsSlap": "goalsSlap",
+        "shootingPctSlap": "shootingPctSlap",
+        "shotsOnNetSnap": "shotsOnNetSnap",
+        "goalsSnap": "goalsSnap",
+        "shootingPctSnap": "shootingPctSnap",
+        "shotsOnNetTipIn": "shotsOnNetTipIn",
+        "goalsTipIn": "goalsTipIn",
+        "shootingPctTipIn": "shootingPctTipIn",
+        "shotsOnNetDeflected": "shotsOnNetDeflected",
+        "goalsDeflected": "goalsDeflected",
+        "shootingPctDeflected": "shootingPctDeflected",
+        "shotsOnNetWrist": "shotsOnNetWrist",
+        "goalsWrist": "goalsWrist",
+        "shootingPctWrist": "shootingPctWrist",
+    }
 
     def fetch_skater_advanced_stats(
         self,
@@ -55,5 +78,10 @@ class NHLAdvancedStatsAdapter(NHLStatsAdapter):
             stats_by_player,
             self._fetch_report("skater", "scoringRates", season, game_type),
             self.SKATER_SCORING_RATE_FIELDS,
+        )
+        self._merge_report(
+            stats_by_player,
+            self._fetch_report("skater", "shottype", season, game_type),
+            self.SKATER_SHOT_TYPE_FIELDS,
         )
         return self._to_lines(stats_by_player)
