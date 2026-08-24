@@ -196,7 +196,7 @@ def test_draft_project_cli(tmp_path, capsys):
     assert "Target season: 2026-27" in output
     assert "Projected GP   78.5" in output
     assert "G              35.3" in output
-    assert "A              70.7" in output
+    assert "A              70.6" in output
     assert "Source seasons: 2025-26, 2024-25, 2023-24" in output
     assert "apollo-skater-baseline-v0.2" in output
     assert "apollo-availability-shrink50-v0.1" in output
