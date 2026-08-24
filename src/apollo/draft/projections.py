@@ -2,6 +2,12 @@ from dataclasses import dataclass
 from datetime import date
 
 from apollo.draft.aging import AGE_MODEL_VERSION, adjust_rate_for_seasons
+from apollo.draft.assist_rate import (
+    ASSIST_RATE_MODEL_VERSION,
+)
+from apollo.draft.assist_rate import (
+    correction_factor as assist_rate_correction_factor,
+)
 from apollo.draft.availability import (
     AVAILABILITY_MODEL_VERSION,
     AvailabilityError,
@@ -15,10 +21,12 @@ from apollo.draft.regression import (
 )
 from apollo.draft.shooting_context import (
     SHOOTING_CONTEXT_MODEL_VERSION,
-    correction_factor,
+)
+from apollo.draft.shooting_context import (
+    correction_factor as shooting_context_correction_factor,
 )
 
-MODEL_VERSION = "apollo-skater-baseline-v0.5"
+MODEL_VERSION = "apollo-skater-baseline-v0.6"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
     "goals",
@@ -56,6 +64,7 @@ class SkaterProjection:
     age_model_version: str | None = None
     regression_model_version: str | None = None
     shooting_context_model_version: str | None = None
+    assist_rate_model_version: str | None = None
 
 
 def _season_years(season: int) -> tuple[int, int]:
@@ -95,6 +104,7 @@ def build_skater_projection(
     birth_date: date | None = None,
     regression_priors: dict[tuple[int, str, str], float] | None = None,
     shooting_context_ratio: float | None = None,
+    assist_rate_context_ratio: float | None = None,
     season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
 ) -> SkaterProjection:
     if not history:
@@ -164,12 +174,21 @@ def build_skater_projection(
     shooting_context_applied = False
     if shooting_context_ratio is not None:
         try:
-            factor = correction_factor(shooting_context_ratio)
+            factor = shooting_context_correction_factor(shooting_context_ratio)
         except ValueError as exc:
             raise ProjectionError(str(exc)) from exc
         projected_stats["goals"] *= factor
         projected_stats["assists"] *= factor
         shooting_context_applied = True
+
+    assist_rate_applied = False
+    if assist_rate_context_ratio is not None:
+        try:
+            factor = assist_rate_correction_factor(assist_rate_context_ratio)
+        except ValueError as exc:
+            raise ProjectionError(str(exc)) from exc
+        projected_stats["assists"] *= factor
+        assist_rate_applied = True
 
     return SkaterProjection(
         player_id=player_id,
@@ -185,4 +204,5 @@ def build_skater_projection(
         shooting_context_model_version=(
             SHOOTING_CONTEXT_MODEL_VERSION if shooting_context_applied else None
         ),
+        assist_rate_model_version=(ASSIST_RATE_MODEL_VERSION if assist_rate_applied else None),
     )
