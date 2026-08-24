@@ -2,12 +2,8 @@ import pytest
 
 from apollo import cli_v14
 from apollo.db import Database
-from apollo.draft.gp_backtest import (
-    GPBacktestPlayer,
-    build_gp_backtest_result,
-    normalize_games_to_82,
-    regular_season_game_limit,
-)
+from apollo.draft.availability import normalize_games_to_82, regular_season_game_limit
+from apollo.draft.gp_backtest import GPBacktestPlayer, build_gp_backtest_result
 from apollo.draft.projections import ProjectionError
 from apollo.services.gp_backtest import run_gp_baseline_backtest
 
