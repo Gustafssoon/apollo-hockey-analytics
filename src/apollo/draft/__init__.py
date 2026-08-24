@@ -1,3 +1,12 @@
+from apollo.draft.availability import (
+    AVAILABILITY_MODEL_VERSION,
+    SHRINK_TO_FULL_SEASON,
+    STANDARD_NHL_GAMES,
+    AvailabilityError,
+    normalize_games_to_82,
+    project_available_games,
+    regular_season_game_limit,
+)
 from apollo.draft.backtest import (
     BACKTEST_STATS,
     TOP_K_CUTOFFS,
@@ -19,13 +28,10 @@ from apollo.draft.config import (
     load_draft_config,
 )
 from apollo.draft.gp_backtest import (
-    STANDARD_NHL_GAMES,
     GPBacktestPlayer,
     GPBacktestResult,
     GPStrategyResult,
     build_gp_backtest_result,
-    normalize_games_to_82,
-    regular_season_game_limit,
 )
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
@@ -40,12 +46,15 @@ from apollo.draft.projections import (
 from apollo.draft.snake import DraftPick, draft_picks, snake_overall_pick
 
 __all__ = [
+    "AVAILABILITY_MODEL_VERSION",
     "BACKTEST_STATS",
     "DEFAULT_SEASON_WEIGHTS",
     "MODEL_VERSION",
+    "SHRINK_TO_FULL_SEASON",
     "SKATER_PROJECTION_STATS",
     "STANDARD_NHL_GAMES",
     "TOP_K_CUTOFFS",
+    "AvailabilityError",
     "BacktestMetric",
     "BacktestPlayer",
     "DraftConfigError",
@@ -71,6 +80,7 @@ __all__ = [
     "load_draft_config",
     "normalize_games_to_82",
     "previous_seasons",
+    "project_available_games",
     "regular_season_game_limit",
     "snake_overall_pick",
     "spearman_rank_correlation",
