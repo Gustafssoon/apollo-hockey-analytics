@@ -113,10 +113,15 @@ def signal_value(
 def build_weighted_signals(
     history: tuple[tuple[int, float, dict[str, float]], ...],
     *,
+    min_signal_seasons: int = 3,
     season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
 ) -> dict[str, float]:
     if len(history) > len(season_weights):
         raise ProjectionError("More advanced history seasons than configured season weights")
+    if min_signal_seasons < 1 or min_signal_seasons > len(season_weights):
+        raise ProjectionError(
+            f"min_signal_seasons must be between 1 and {len(season_weights)}"
+        )
 
     weighted: dict[str, float] = {}
     for signal_name in ADVANCED_SIGNAL_NAMES:
@@ -130,6 +135,8 @@ def build_weighted_signals(
             if value is None:
                 continue
             values.append((value, season_weights[index]))
+        if len(values) < min_signal_seasons:
+            continue
         result = _weighted_average(values)
         if result is not None:
             weighted[signal_name] = result
