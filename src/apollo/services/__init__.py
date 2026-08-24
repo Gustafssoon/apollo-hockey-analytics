@@ -1,3 +1,7 @@
+from apollo.services.advanced_pdo_backtest import (
+    run_advanced_pdo_aggregate,
+    run_advanced_pdo_backtest,
+)
 from apollo.services.advanced_signal_backtest import (
     run_advanced_signal_aggregate,
     run_advanced_signal_backtest,
@@ -37,6 +41,8 @@ __all__ = [
     "NHLSyncResult",
     "SyncResult",
     "project_skater",
+    "run_advanced_pdo_aggregate",
+    "run_advanced_pdo_backtest",
     "run_advanced_signal_aggregate",
     "run_advanced_signal_backtest",
     "run_age_baseline_backtest",
