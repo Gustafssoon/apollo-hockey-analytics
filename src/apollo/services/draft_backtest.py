@@ -11,6 +11,7 @@ from apollo.draft.projections import (
     build_skater_projection,
     previous_seasons,
 )
+from apollo.services.regression import load_position_priors
 
 
 def run_skater_backtest(
@@ -29,6 +30,7 @@ def run_skater_backtest(
 
     database.initialize()
     source_seasons = previous_seasons(target_season, len(DEFAULT_SEASON_WEIGHTS))
+    regression_priors = load_position_priors(database, source_seasons)
     seasons = (target_season, *source_seasons)
     placeholders = ", ".join("?" for _ in seasons)
 
@@ -129,6 +131,7 @@ def run_skater_backtest(
                 target_season=target_season,
                 history=tuple(history),
                 birth_date=birth_date,
+                regression_priors=regression_priors,
             )
         except ProjectionError:
             skipped_incomplete_history += 1
