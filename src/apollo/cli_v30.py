@@ -78,21 +78,23 @@ def _draft_scoring_rate_regression_summary(args: argparse.Namespace) -> None:
     )
     ordered = sorted(
         result.strategies,
-        key=lambda strategy: (_metric(strategy, "points").mae, strategy.strategy_name),
+        key=lambda strategy: (_metric(strategy, "points").weighted_mae, strategy.strategy_name),
     )
     for strategy in ordered:
         pts = _metric(strategy, "points")
         goals = _metric(strategy, "goals")
         assists = _metric(strategy, "assists")
         print(
-            f"{strategy.strategy_name:<22} {pts.mae:>8.3f} "
-            f"{baseline_pts.mae - pts.mae:>+8.3f} "
+            f"{strategy.strategy_name:<22} {pts.weighted_mae:>8.3f} "
+            f"{baseline_pts.weighted_mae - pts.weighted_mae:>+8.3f} "
             f"{strategy.points_improved_years:>2}/{len(result.target_seasons):<2} "
             f"{strategy.worst_points_mae_gain:>+8.3f} "
             f"{_fmt_rho(pts.weighted_rho):>8} "
             f"{strategy.top25_overlap_rate * 100:>6.1f}% "
-            f"{goals.mae:>7.3f} {baseline_g.mae - goals.mae:>+7.3f} "
-            f"{assists.mae:>7.3f} {baseline_a.mae - assists.mae:>+7.3f}"
+            f"{goals.weighted_mae:>7.3f} "
+            f"{baseline_g.weighted_mae - goals.weighted_mae:>+7.3f} "
+            f"{assists.weighted_mae:>7.3f} "
+            f"{baseline_a.weighted_mae - assists.weighted_mae:>+7.3f}"
         )
 
     print()
