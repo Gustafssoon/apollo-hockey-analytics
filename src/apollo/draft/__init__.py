@@ -22,7 +22,10 @@ from apollo.draft.gp_backtest import (
     GPBacktestPlayer,
     GPBacktestResult,
     GPStrategyResult,
+    STANDARD_NHL_GAMES,
     build_gp_backtest_result,
+    normalize_games_to_82,
+    regular_season_game_limit,
 )
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
@@ -41,6 +44,7 @@ __all__ = [
     "DEFAULT_SEASON_WEIGHTS",
     "MODEL_VERSION",
     "SKATER_PROJECTION_STATS",
+    "STANDARD_NHL_GAMES",
     "TOP_K_CUTOFFS",
     "BacktestMetric",
     "BacktestPlayer",
@@ -65,7 +69,9 @@ __all__ = [
     "build_skater_projection",
     "draft_picks",
     "load_draft_config",
+    "normalize_games_to_82",
     "previous_seasons",
+    "regular_season_game_limit",
     "snake_overall_pick",
     "spearman_rank_correlation",
 ]
