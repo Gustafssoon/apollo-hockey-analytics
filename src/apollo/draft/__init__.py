@@ -4,7 +4,16 @@ from apollo.draft.age_backtest import (
     AgeBacktestResult,
     AgeCurveStrategy,
     AgeStrategyResult,
+    age_adjusted_rate,
     build_age_backtest_result,
+)
+from apollo.draft.age_stat_backtest import (
+    AGE_STAT_NAMES,
+    AgeStatBacktestPlayer,
+    AgeStatBacktestResult,
+    AgeStatHistorySeason,
+    AgeStatStrategyResult,
+    build_age_stat_backtest_result,
 )
 from apollo.draft.availability import (
     AVAILABILITY_MODEL_VERSION,
@@ -55,6 +64,7 @@ from apollo.draft.snake import DraftPick, draft_picks, snake_overall_pick
 
 __all__ = [
     "AGE_CURVE_STRATEGIES",
+    "AGE_STAT_NAMES",
     "AVAILABILITY_MODEL_VERSION",
     "BACKTEST_STATS",
     "DEFAULT_SEASON_WEIGHTS",
@@ -66,6 +76,10 @@ __all__ = [
     "AgeBacktestPlayer",
     "AgeBacktestResult",
     "AgeCurveStrategy",
+    "AgeStatBacktestPlayer",
+    "AgeStatBacktestResult",
+    "AgeStatHistorySeason",
+    "AgeStatStrategyResult",
     "AgeStrategyResult",
     "AvailabilityError",
     "BacktestMetric",
@@ -86,7 +100,9 @@ __all__ = [
     "ScoringConfig",
     "SkaterProjection",
     "TopKOverlap",
+    "age_adjusted_rate",
     "build_age_backtest_result",
+    "build_age_stat_backtest_result",
     "build_backtest_result",
     "build_gp_backtest_result",
     "build_skater_projection",
