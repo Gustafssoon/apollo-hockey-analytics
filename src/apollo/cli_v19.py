@@ -66,10 +66,11 @@ def _draft_deployment_backtest(args: argparse.Namespace) -> None:
         f"TOI coverage: {result.evaluated_players}/{result.base_eligible_players} "
         f"({result.toi_coverage * 100:.1f}%)"
     )
+    print("TOI MAE is reported in seconds per game.")
     print("Control: apollo-skater-baseline-v0.3")
     print()
     print(
-        f"{'STRATEGY':<18} {'TOI MAE':>8} {'TOI RHO':>8} {'PTS MAE':>8} "
+        f"{'STRATEGY':<18} {'TOI MAE(s)':>10} {'TOI RHO':>8} {'PTS MAE':>8} "
         f"{'GAIN':>8} {'PTS RHO':>8} {'TOP25':>7} {'RAW+':>6}"
     )
 
@@ -84,7 +85,7 @@ def _draft_deployment_backtest(args: argparse.Namespace) -> None:
         toi_mae = "n/a" if strategy.projected_toi_mae is None else f"{strategy.projected_toi_mae:.2f}"
         top25 = next(item for item in strategy.top_k_points if item.requested_k == 25)
         print(
-            f"{strategy.strategy_name:<18} {toi_mae:>8} "
+            f"{strategy.strategy_name:<18} {toi_mae:>10} "
             f"{_format_rho(strategy.projected_toi_rho):>8} {pts.mae:>8.2f} "
             f"{baseline_pts.mae - pts.mae:>+8.2f} {_format_rho(pts.spearman_rho):>8} "
             f"{top25.overlap_rate * 100:>6.1f}% {raw_improved:>2}/6"
