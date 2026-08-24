@@ -1,3 +1,11 @@
+from apollo.draft.age_backtest import (
+    AGE_CURVE_STRATEGIES,
+    AgeBacktestPlayer,
+    AgeBacktestResult,
+    AgeCurveStrategy,
+    AgeStrategyResult,
+    build_age_backtest_result,
+)
 from apollo.draft.availability import (
     AVAILABILITY_MODEL_VERSION,
     SHRINK_TO_FULL_SEASON,
@@ -46,6 +54,7 @@ from apollo.draft.projections import (
 from apollo.draft.snake import DraftPick, draft_picks, snake_overall_pick
 
 __all__ = [
+    "AGE_CURVE_STRATEGIES",
     "AVAILABILITY_MODEL_VERSION",
     "BACKTEST_STATS",
     "DEFAULT_SEASON_WEIGHTS",
@@ -54,6 +63,10 @@ __all__ = [
     "SKATER_PROJECTION_STATS",
     "STANDARD_NHL_GAMES",
     "TOP_K_CUTOFFS",
+    "AgeBacktestPlayer",
+    "AgeBacktestResult",
+    "AgeCurveStrategy",
+    "AgeStrategyResult",
     "AvailabilityError",
     "BacktestMetric",
     "BacktestPlayer",
@@ -73,6 +86,7 @@ __all__ = [
     "ScoringConfig",
     "SkaterProjection",
     "TopKOverlap",
+    "build_age_backtest_result",
     "build_backtest_result",
     "build_gp_backtest_result",
     "build_skater_projection",
