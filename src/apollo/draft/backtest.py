@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from math import sqrt
 
-from apollo.draft.projections import MODEL_VERSION, ProjectionError, SKATER_PROJECTION_STATS
+from apollo.draft.projections import MODEL_VERSION, SKATER_PROJECTION_STATS, ProjectionError
 
 BACKTEST_STATS = (
     "gamesPlayed",
