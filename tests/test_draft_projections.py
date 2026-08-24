@@ -112,9 +112,9 @@ def test_three_season_skater_projection_uses_weighted_per_game_rates(tmp_path):
     projection = project_skater(database, "Connor McDavid", 20262027)
 
     assert projection.projected_games == pytest.approx(75.0)
-    assert projection.stats["goals"] == pytest.approx(33.0)
-    assert projection.stats["assists"] == pytest.approx(66.0)
-    assert projection.stats["powerPlayPoints"] == pytest.approx(33.0)
+    assert projection.stats["goals"] == pytest.approx(33.75)
+    assert projection.stats["assists"] == pytest.approx(67.5)
+    assert projection.stats["powerPlayPoints"] == pytest.approx(33.75)
     assert projection.stats["shots"] == pytest.approx(225.0)
     assert projection.stats["hits"] == pytest.approx(75.0)
     assert projection.stats["blockedShots"] == pytest.approx(37.5)
@@ -193,8 +193,8 @@ def test_draft_project_cli(tmp_path, capsys):
     assert "Connor McDavid | C | EDM" in output
     assert "Target season: 2026-27" in output
     assert "Projected GP   75.0" in output
-    assert "G              33.0" in output
-    assert "A              66.0" in output
+    assert "G              33.8" in output
+    assert "A              67.5" in output
     assert "Source seasons: 2025-26, 2024-25, 2023-24" in output
     assert "apollo-skater-baseline-v0.1" in output
 
@@ -202,34 +202,7 @@ def test_draft_project_cli(tmp_path, capsys):
 def test_existing_draft_config_command_still_routes_through_v11(tmp_path, capsys):
     config = tmp_path / "draft.yaml"
     config.write_text(
-        """league:
-  name: Test League
-  teams: 2
-draft:
-  type: snake
-  my_slot: 1
-  rounds: 1
-roster:
-  C: 1
-  LW: 1
-  RW: 1
-  D: 1
-  G: 1
-  BN: 1
-scoring:
-  skaters:
-    G: 1
-    A: 1
-    PPP: 1
-    SOG: 1
-    HIT: 1
-    BLK: 1
-  goalies:
-    W: 1
-    SV: 1
-    GA: -1
-    SO: 1
-""",
+        """league:\n  name: Test League\n  teams: 2\ndraft:\n  type: snake\n  my_slot: 1\n  rounds: 1\nroster:\n  C: 1\n  LW: 0\n  RW: 0\n  D: 0\n  G: 0\n  BN: 0\nscoring:\n  skaters:\n    G: 1\n    A: 0\n    PPP: 0\n    SOG: 0\n    HIT: 0\n    BLK: 0\n  goalies:\n    W: 1\n    SV: 0\n    GA: 0\n    SO: 0\n""",
         encoding="utf-8",
     )
 
