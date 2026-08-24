@@ -10,6 +10,7 @@ from apollo.draft.projections import (
     ProjectionError,
 )
 
+MAX_SKATER_TOI_PER_GAME = 1800.0
 DEPLOYMENT_STRATEGIES = (
     "baseline_v03",
     "toi_latest",
@@ -17,6 +18,10 @@ DEPLOYMENT_STRATEGIES = (
     "toi_mean",
     "toi_median",
     "toi_max",
+    "toi_recent_trend25",
+    "toi_recent_trend50",
+    "toi_linear_trend25",
+    "toi_linear_trend50",
     "actual_toi_oracle",
 )
 DEPLOYMENT_STATS = ("points", *SKATER_PROJECTION_STATS)
@@ -77,6 +82,24 @@ def _weighted_average(values: list[tuple[float, float]]) -> float:
     return sum(value * weight for value, weight in values) / weight_sum
 
 
+def _clamp_toi(value: float) -> float:
+    return min(MAX_SKATER_TOI_PER_GAME, max(0.0, value))
+
+
+def _recent_trend(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    return values[0] - values[1]
+
+
+def _linear_trend(values: list[float]) -> float:
+    if len(values) < 2:
+        return 0.0
+    if len(values) == 2:
+        return values[0] - values[1]
+    return (values[0] - values[-1]) / (len(values) - 1)
+
+
 def _project_toi(
     player: DeploymentBacktestPlayer,
     strategy_name: str,
@@ -104,6 +127,14 @@ def _project_toi(
             if index < len(season_weights) and season.time_on_ice_per_game > 0
         ]
         return _weighted_average(weighted)
+    if strategy_name == "toi_recent_trend25":
+        return _clamp_toi(values[0] + 0.25 * _recent_trend(values))
+    if strategy_name == "toi_recent_trend50":
+        return _clamp_toi(values[0] + 0.50 * _recent_trend(values))
+    if strategy_name == "toi_linear_trend25":
+        return _clamp_toi(values[0] + 0.25 * _linear_trend(values))
+    if strategy_name == "toi_linear_trend50":
+        return _clamp_toi(values[0] + 0.50 * _linear_trend(values))
     raise ProjectionError(f"Unknown deployment strategy: {strategy_name}")
 
 

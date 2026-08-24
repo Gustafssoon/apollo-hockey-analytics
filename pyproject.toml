@@ -1,6 +1,6 @@
 [project]
 name = "apollo-hockey-analytics"
-version = "0.22.0"
+version = "0.23.0"
 description = "Fantasy hockey analytics platform for league sync, player evaluation, waiver analysis, matchup optimization, and AI-assisted decision support."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
