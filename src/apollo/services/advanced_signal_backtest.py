@@ -141,7 +141,10 @@ def run_advanced_signal_backtest(
             continue
 
         baseline_eligible_players += 1
-        weighted_signals = build_weighted_signals(tuple(advanced_history))
+        weighted_signals = build_weighted_signals(
+            tuple(advanced_history),
+            min_signal_seasons=min_history_seasons,
+        )
         players.append(
             AdvancedSignalPlayer(
                 player_id=player_id,
