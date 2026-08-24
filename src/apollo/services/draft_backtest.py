@@ -4,9 +4,9 @@ from apollo.db import Database
 from apollo.draft.backtest import BacktestPlayer, ProjectionBacktestResult, build_backtest_result
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
+    SKATER_PROJECTION_STATS,
     ProjectionError,
     ProjectionSeason,
-    SKATER_PROJECTION_STATS,
     build_skater_projection,
     previous_seasons,
 )
