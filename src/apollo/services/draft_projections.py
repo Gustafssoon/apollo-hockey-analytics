@@ -8,6 +8,7 @@ from apollo.draft.projections import (
     build_skater_projection,
     previous_seasons,
 )
+from apollo.services.regression import load_position_priors
 
 
 def project_skater(
@@ -22,6 +23,7 @@ def project_skater(
     database.initialize()
     source_seasons = previous_seasons(target_season)
     placeholders = ", ".join("?" for _ in source_seasons)
+    regression_priors = load_position_priors(database, source_seasons)
 
     with database.connect() as connection:
         players = connection.execute(
@@ -100,4 +102,5 @@ def project_skater(
         target_season=target_season,
         history=tuple(history),
         birth_date=birth_date,
+        regression_priors=regression_priors,
     )
