@@ -4,6 +4,8 @@ from datetime import date
 from apollo.draft.aging import AGE_MODEL_VERSION, adjust_rate_for_seasons
 from apollo.draft.assist_rate import (
     ASSIST_RATE_MODEL_VERSION,
+)
+from apollo.draft.assist_rate import (
     correction_factor as assist_rate_correction_factor,
 )
 from apollo.draft.availability import (
@@ -19,6 +21,8 @@ from apollo.draft.regression import (
 )
 from apollo.draft.shooting_context import (
     SHOOTING_CONTEXT_MODEL_VERSION,
+)
+from apollo.draft.shooting_context import (
     correction_factor as shooting_context_correction_factor,
 )
 
