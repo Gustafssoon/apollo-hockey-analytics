@@ -1,3 +1,4 @@
+from apollo.services.draft_projections import project_skater
 from apollo.services.nhl_catalog import (
     NHLGameLogSyncResult,
     NHLLeagueScheduleSyncResult,
@@ -22,6 +23,7 @@ __all__ = [
     "NHLScheduleSyncResult",
     "NHLSyncResult",
     "SyncResult",
+    "project_skater",
     "sync_league",
     "sync_nhl_category_stats",
     "sync_nhl_game_log",
