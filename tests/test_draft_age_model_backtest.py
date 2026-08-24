@@ -1,5 +1,3 @@
-import pytest
-
 from apollo import cli_v18
 from apollo.db import Database
 from apollo.draft.age_model_backtest import (
