@@ -66,16 +66,11 @@ def project_skater(
 
     history: list[ProjectionSeason] = []
     for season in source_seasons:
-        stats = by_season.get(season)
-        if not stats:
-            continue
-        games_played = stats.get("gamesPlayed")
-        if games_played is None:
-            continue
+        stats = by_season.get(season, {})
         history.append(
             ProjectionSeason(
                 season=season,
-                games_played=games_played,
+                games_played=stats.get("gamesPlayed", 0.0),
                 stats=stats,
             )
         )
