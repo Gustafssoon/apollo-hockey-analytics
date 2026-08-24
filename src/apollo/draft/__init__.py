@@ -7,6 +7,18 @@ from apollo.draft.age_backtest import (
     age_adjusted_rate,
     build_age_backtest_result,
 )
+from apollo.draft.age_model_backtest import (
+    AGE_MODEL_CANDIDATES,
+    AgeModelAggregateCandidate,
+    AgeModelAggregateResult,
+    AgeModelBacktestPlayer,
+    AgeModelBacktestResult,
+    AgeModelCandidateResult,
+    AgeModelHistorySeason,
+    AgeModelMetric,
+    build_age_model_aggregate,
+    build_age_model_backtest_result,
+)
 from apollo.draft.age_stat_aggregate import (
     AgeStatAggregateStrategy,
     AgeStatAggregateSummary,
@@ -69,6 +81,7 @@ from apollo.draft.snake import DraftPick, draft_picks, snake_overall_pick
 
 __all__ = [
     "AGE_CURVE_STRATEGIES",
+    "AGE_MODEL_CANDIDATES",
     "AGE_STAT_NAMES",
     "AVAILABILITY_MODEL_VERSION",
     "BACKTEST_STATS",
@@ -81,6 +94,13 @@ __all__ = [
     "AgeBacktestPlayer",
     "AgeBacktestResult",
     "AgeCurveStrategy",
+    "AgeModelAggregateCandidate",
+    "AgeModelAggregateResult",
+    "AgeModelBacktestPlayer",
+    "AgeModelBacktestResult",
+    "AgeModelCandidateResult",
+    "AgeModelHistorySeason",
+    "AgeModelMetric",
     "AgeStatAggregateStrategy",
     "AgeStatAggregateSummary",
     "AgeStatBacktestPlayer",
@@ -109,6 +129,8 @@ __all__ = [
     "TopKOverlap",
     "age_adjusted_rate",
     "build_age_backtest_result",
+    "build_age_model_aggregate",
+    "build_age_model_backtest_result",
     "build_age_stat_aggregate_summary",
     "build_age_stat_backtest_result",
     "build_backtest_result",
