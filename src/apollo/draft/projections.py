@@ -7,8 +7,14 @@ from apollo.draft.availability import (
     AvailabilityError,
     project_available_games,
 )
+from apollo.draft.regression import (
+    REGRESSION_MODEL_VERSION,
+    REGRESSION_PSEUDO_GAMES_BY_STAT,
+    position_group,
+    regress_rate,
+)
 
-MODEL_VERSION = "apollo-skater-baseline-v0.3"
+MODEL_VERSION = "apollo-skater-baseline-v0.4"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
     "goals",
@@ -44,6 +50,7 @@ class SkaterProjection:
     model_version: str = MODEL_VERSION
     availability_model_version: str = AVAILABILITY_MODEL_VERSION
     age_model_version: str | None = None
+    regression_model_version: str | None = None
 
 
 def _season_years(season: int) -> tuple[int, int]:
@@ -81,6 +88,7 @@ def build_skater_projection(
     target_season: int,
     history: tuple[ProjectionSeason, ...],
     birth_date: date | None = None,
+    regression_priors: dict[tuple[int, str, str], float] | None = None,
     season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
 ) -> SkaterProjection:
     if not history:
@@ -106,14 +114,29 @@ def build_skater_projection(
     except AvailabilityError as exc:
         raise ProjectionError(str(exc)) from exc
 
+    group = position_group(position)
+    regression_applied = False
     projected_stats: dict[str, float] = {}
     for stat_name in SKATER_PROJECTION_STATS:
         rate_values: list[tuple[float, float]] = []
+        pseudo_games = REGRESSION_PSEUDO_GAMES_BY_STAT[stat_name]
         for season in usable:
             value = season.stats.get(stat_name)
             if value is None:
                 continue
-            rate = value / season.games_played
+            prior_rate = None
+            if regression_priors is not None:
+                prior_rate = regression_priors.get((season.season, group, stat_name))
+            try:
+                rate, applied = regress_rate(
+                    value=value,
+                    games_played=season.games_played,
+                    prior_rate=prior_rate,
+                    pseudo_games=pseudo_games,
+                )
+            except ValueError as exc:
+                raise ProjectionError(str(exc)) from exc
+            regression_applied = regression_applied or applied
             if birth_date is not None:
                 try:
                     rate = adjust_rate_for_seasons(
@@ -142,4 +165,5 @@ def build_skater_projection(
         stats=projected_stats,
         source_seasons=tuple(season.season for season in usable),
         age_model_version=(AGE_MODEL_VERSION if birth_date is not None else None),
+        regression_model_version=(REGRESSION_MODEL_VERSION if regression_applied else None),
     )
