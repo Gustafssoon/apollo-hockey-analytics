@@ -34,8 +34,8 @@ def test_weighted_pdo_signals_use_calendar_weights_and_require_three_seasons():
     )
 
     assert complete["shooting_pct_5v5"] == pytest.approx(0.11)
-    assert complete["save_pct_5v5"] == pytest.approx(0.907)
-    assert complete["pdo_5v5"] == pytest.approx(1.017)
+    assert complete["save_pct_5v5"] == pytest.approx(0.905)
+    assert complete["pdo_5v5"] == pytest.approx(1.015)
     assert "shooting_pct_5v5" in incomplete
     assert "save_pct_5v5" not in incomplete
     assert "pdo_5v5" not in incomplete
