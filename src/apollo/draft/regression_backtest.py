@@ -3,7 +3,11 @@ from datetime import date
 
 from apollo.draft.aging import adjust_rate_for_seasons
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
-from apollo.draft.projections import DEFAULT_SEASON_WEIGHTS, SKATER_PROJECTION_STATS, ProjectionError
+from apollo.draft.projections import (
+    DEFAULT_SEASON_WEIGHTS,
+    SKATER_PROJECTION_STATS,
+    ProjectionError,
+)
 
 REGRESSION_PSEUDO_GAMES = (5.0, 10.0, 20.0, 40.0)
 REGRESSION_STRATEGIES = (
