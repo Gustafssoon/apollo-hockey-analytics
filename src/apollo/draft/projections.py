@@ -13,8 +13,12 @@ from apollo.draft.regression import (
     position_group,
     regress_rate,
 )
+from apollo.draft.shooting_context import (
+    SHOOTING_CONTEXT_MODEL_VERSION,
+    correction_factor,
+)
 
-MODEL_VERSION = "apollo-skater-baseline-v0.4"
+MODEL_VERSION = "apollo-skater-baseline-v0.5"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
     "goals",
@@ -51,6 +55,7 @@ class SkaterProjection:
     availability_model_version: str = AVAILABILITY_MODEL_VERSION
     age_model_version: str | None = None
     regression_model_version: str | None = None
+    shooting_context_model_version: str | None = None
 
 
 def _season_years(season: int) -> tuple[int, int]:
@@ -89,6 +94,7 @@ def build_skater_projection(
     history: tuple[ProjectionSeason, ...],
     birth_date: date | None = None,
     regression_priors: dict[tuple[int, str, str], float] | None = None,
+    shooting_context_ratio: float | None = None,
     season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
 ) -> SkaterProjection:
     if not history:
@@ -155,6 +161,16 @@ def build_skater_projection(
             )
         projected_stats[stat_name] = _weighted_average(rate_values) * projected_games
 
+    shooting_context_applied = False
+    if shooting_context_ratio is not None:
+        try:
+            factor = correction_factor(shooting_context_ratio)
+        except ValueError as exc:
+            raise ProjectionError(str(exc)) from exc
+        projected_stats["goals"] *= factor
+        projected_stats["assists"] *= factor
+        shooting_context_applied = True
+
     return SkaterProjection(
         player_id=player_id,
         player_name=player_name,
@@ -166,4 +182,7 @@ def build_skater_projection(
         source_seasons=tuple(season.season for season in usable),
         age_model_version=(AGE_MODEL_VERSION if birth_date is not None else None),
         regression_model_version=(REGRESSION_MODEL_VERSION if regression_applied else None),
+        shooting_context_model_version=(
+            SHOOTING_CONTEXT_MODEL_VERSION if shooting_context_applied else None
+        ),
     )
