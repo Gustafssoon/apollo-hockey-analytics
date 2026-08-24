@@ -2,7 +2,12 @@ import pytest
 
 from apollo import cli_v14
 from apollo.db import Database
-from apollo.draft.gp_backtest import GPBacktestPlayer, build_gp_backtest_result
+from apollo.draft.gp_backtest import (
+    GPBacktestPlayer,
+    build_gp_backtest_result,
+    normalize_games_to_82,
+    regular_season_game_limit,
+)
 from apollo.draft.projections import ProjectionError
 from apollo.services.gp_backtest import run_gp_baseline_backtest
 
@@ -95,6 +100,30 @@ def test_gp_shootout_can_identify_fixed_82_when_it_is_exact():
     assert strategies["weighted_60_30_10"].gp_mae > 0
 
 
+def test_games_normalization_uses_season_schedule_length():
+    assert regular_season_game_limit(20202021) == 56
+    assert regular_season_game_limit(20212022) == 82
+    assert normalize_games_to_82(20202021, 56) == pytest.approx(82.0)
+    assert normalize_games_to_82(20202021, 42) == pytest.approx(61.5)
+    assert normalize_games_to_82(20222023, 41) == pytest.approx(41.0)
+
+
+def test_gp_backtest_service_normalizes_shortened_history_season(tmp_path):
+    database = Database(tmp_path / "apollo.db")
+    player_id = _insert_player(database, "Full", "Availability")
+    _insert_season(database, player_id, 20202021, games=56, goals=28, assists=28)
+    _insert_season(database, player_id, 20212022, games=82, goals=41, assists=41)
+    _insert_season(database, player_id, 20222023, games=82, goals=41, assists=41)
+    _insert_season(database, player_id, 20232024, games=82, goals=41, assists=41)
+
+    result = run_gp_baseline_backtest(database, 20232024)
+    strategies = {strategy.name: strategy for strategy in result.strategies}
+
+    assert result.evaluated_players == 1
+    assert result.source_seasons == (20222023, 20212022, 20202021)
+    assert strategies["weighted_60_30_10"].gp_mae == pytest.approx(0.0)
+
+
 def test_gp_backtest_service_requires_complete_three_season_history(tmp_path):
     database = Database(tmp_path / "apollo.db")
     _seed_gp_backtest(database)
@@ -111,6 +140,13 @@ def test_gp_backtest_rejects_invalid_minimum_games(tmp_path):
 
     with pytest.raises(ProjectionError, match="min_actual_games must be >= 1"):
         run_gp_baseline_backtest(database, 20252026, min_actual_games=0)
+
+
+def test_gp_backtest_rejects_shortened_target_season(tmp_path):
+    database = Database(tmp_path / "apollo.db")
+
+    with pytest.raises(ProjectionError, match="requires an 82-game target season"):
+        run_gp_baseline_backtest(database, 20202021)
 
 
 def test_gp_backtest_cli(tmp_path, capsys):
