@@ -3,12 +3,27 @@ from dataclasses import dataclass
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
 from apollo.draft.projections import ProjectionError
 from apollo.draft.shooting_context import (
-    build_shooting_context_ratio as build_shooting_context_ratio,
+    SHOOTING_CONTEXT_SEASON_WEIGHTS,
+    build_shooting_context_ratio as _build_shooting_context_ratio,
     correction_factor,
 )
 
 CORRECTION_STRENGTHS = (0.10, 0.25, 0.50)
 CORRECTION_SCOPES = ("goals", "offense")
+
+
+def build_shooting_context_ratio(
+    history: tuple[tuple[float, float], ...],
+    *,
+    min_signal_seasons: int = 3,
+    season_weights: tuple[float, ...] = SHOOTING_CONTEXT_SEASON_WEIGHTS,
+) -> float | None:
+    """Compatibility wrapper around the production shooting-context implementation."""
+    return _build_shooting_context_ratio(
+        history,
+        min_signal_seasons=min_signal_seasons,
+        season_weights=season_weights,
+    )
 
 
 @dataclass(frozen=True, slots=True)
