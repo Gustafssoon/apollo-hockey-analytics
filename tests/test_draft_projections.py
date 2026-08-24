@@ -202,7 +202,34 @@ def test_draft_project_cli(tmp_path, capsys):
 def test_existing_draft_config_command_still_routes_through_v11(tmp_path, capsys):
     config = tmp_path / "draft.yaml"
     config.write_text(
-        """league:\n  name: Test League\n  teams: 2\ndraft:\n  type: snake\n  my_slot: 1\n  rounds: 1\nroster:\n  C: 1\nscoring:\n  skaters:\n    G: 1\n  goalies:\n    W: 1\n""",
+        """league:
+  name: Test League
+  teams: 2
+draft:
+  type: snake
+  my_slot: 1
+  rounds: 1
+roster:
+  C: 1
+  LW: 1
+  RW: 1
+  D: 1
+  G: 1
+  BN: 1
+scoring:
+  skaters:
+    G: 1
+    A: 1
+    PPP: 1
+    SOG: 1
+    HIT: 1
+    BLK: 1
+  goalies:
+    W: 1
+    SV: 1
+    GA: -1
+    SO: 1
+""",
         encoding="utf-8",
     )
 
