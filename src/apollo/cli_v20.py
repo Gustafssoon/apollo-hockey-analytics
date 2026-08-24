@@ -65,7 +65,7 @@ def _draft_pp_usage_backtest(args: argparse.Namespace) -> None:
     print("Control: apollo-skater-baseline-v0.3")
     print()
     print(
-        f"{'STRATEGY':<20} {'PP MAE(s)':>9} {'PP RHO':>8} {'PPP MAE':>8} "
+        f"{'STRATEGY':<23} {'PP MAE(s)':>9} {'PP RHO':>8} {'PPP MAE':>8} "
         f"{'GAIN':>8} {'PPP RHO':>8} {'TOP25':>7}"
     )
 
@@ -74,7 +74,7 @@ def _draft_pp_usage_backtest(args: argparse.Namespace) -> None:
         pp_mae = "n/a" if strategy.pp_toi_mae is None else f"{strategy.pp_toi_mae:.2f}"
         top25 = next(item for item in strategy.top_k_ppp if item.requested_k == 25)
         print(
-            f"{strategy.strategy_name:<20} {pp_mae:>9} "
+            f"{strategy.strategy_name:<23} {pp_mae:>9} "
             f"{_format_rho(strategy.pp_toi_spearman_rho):>8} {strategy.ppp_mae:>8.2f} "
             f"{baseline.ppp_mae - strategy.ppp_mae:>+8.2f} "
             f"{_format_rho(strategy.ppp_spearman_rho):>8} "

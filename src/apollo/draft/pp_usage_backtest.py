@@ -5,11 +5,17 @@ from apollo.draft.aging import adjust_rate_for_seasons
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
 from apollo.draft.projections import DEFAULT_SEASON_WEIGHTS, ProjectionError
 
+PP_BLEND_WEIGHTS = {
+    "pp_blend_weighted25": 0.25,
+    "pp_blend_weighted50": 0.50,
+    "pp_blend_weighted75": 0.75,
+}
 PP_USAGE_STRATEGIES = (
     "baseline_v03",
     "pp_toi_latest",
     "pp_toi_weighted",
     "pp_toi_mean",
+    *PP_BLEND_WEIGHTS,
     "actual_pp_toi_oracle",
 )
 
@@ -75,7 +81,7 @@ def _project_pp_toi(
         return values[0]
     if strategy_name == "pp_toi_mean":
         return sum(values) / len(values)
-    if strategy_name == "pp_toi_weighted":
+    if strategy_name == "pp_toi_weighted" or strategy_name in PP_BLEND_WEIGHTS:
         return _weighted_average(
             [
                 (season.pp_time_on_ice_per_game, season_weights[index])
@@ -174,7 +180,15 @@ def build_pp_usage_backtest_result(
                 continue
             projected_pp_toi = _project_pp_toi(player, strategy_name, season_weights)
             projected_pp_toi_values.append(projected_pp_toi)
-            projected_ppp.append(_project_ppp(player, projected_pp_toi, season_weights))
+            deployment_ppp = _project_ppp(player, projected_pp_toi, season_weights)
+            if strategy_name in PP_BLEND_WEIGHTS:
+                deployment_weight = PP_BLEND_WEIGHTS[strategy_name]
+                projected_ppp.append(
+                    player.baseline_power_play_points * (1.0 - deployment_weight)
+                    + deployment_ppp * deployment_weight
+                )
+            else:
+                projected_ppp.append(deployment_ppp)
 
         pp_toi_mae = None
         pp_toi_rho = None
