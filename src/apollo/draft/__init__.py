@@ -1,3 +1,13 @@
+from apollo.draft.backtest import (
+    BACKTEST_STATS,
+    TOP_K_CUTOFFS,
+    BacktestMetric,
+    BacktestPlayer,
+    ProjectionBacktestResult,
+    TopKOverlap,
+    build_backtest_result,
+    spearman_rank_correlation,
+)
 from apollo.draft.config import (
     DraftConfigError,
     DraftLeagueConfig,
@@ -21,23 +31,31 @@ from apollo.draft.projections import (
 from apollo.draft.snake import DraftPick, draft_picks, snake_overall_pick
 
 __all__ = [
+    "BACKTEST_STATS",
     "DEFAULT_SEASON_WEIGHTS",
     "MODEL_VERSION",
     "SKATER_PROJECTION_STATS",
+    "TOP_K_CUTOFFS",
+    "BacktestMetric",
+    "BacktestPlayer",
     "DraftConfigError",
     "DraftLeagueConfig",
     "DraftPick",
     "DraftSettings",
     "LeagueConfig",
+    "ProjectionBacktestResult",
     "ProjectionError",
     "ProjectionSeason",
     "RosterSlot",
     "ScoringCategory",
     "ScoringConfig",
     "SkaterProjection",
+    "TopKOverlap",
+    "build_backtest_result",
     "build_skater_projection",
     "draft_picks",
     "load_draft_config",
     "previous_seasons",
     "snake_overall_pick",
+    "spearman_rank_correlation",
 ]
