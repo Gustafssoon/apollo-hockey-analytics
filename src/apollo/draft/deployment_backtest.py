@@ -1,9 +1,14 @@
 from dataclasses import dataclass
+from datetime import date
 from statistics import median
 
 from apollo.draft.aging import adjust_rate_for_seasons
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
-from apollo.draft.projections import DEFAULT_SEASON_WEIGHTS, SKATER_PROJECTION_STATS, ProjectionError
+from apollo.draft.projections import (
+    DEFAULT_SEASON_WEIGHTS,
+    SKATER_PROJECTION_STATS,
+    ProjectionError,
+)
 
 DEPLOYMENT_STRATEGIES = (
     "baseline_v03",
@@ -31,7 +36,7 @@ class DeploymentBacktestPlayer:
     player_name: str
     position: str
     target_season: int
-    birth_date: object | None
+    birth_date: date | None
     projected_games: float
     baseline_stats: dict[str, float]
     history: tuple[DeploymentHistorySeason, ...]
@@ -211,7 +216,6 @@ def build_deployment_backtest_result(
                 projected_raw = {
                     stat: player.baseline_stats[stat] for stat in SKATER_PROJECTION_STATS
                 }
-                projected_toi = None
             else:
                 projected_toi = _project_toi(player, strategy_name, season_weights)
                 projected_toi_values.append(projected_toi)
