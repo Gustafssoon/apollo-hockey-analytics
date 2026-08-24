@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from math import sqrt
 
-from apollo.draft.aging import AgeCurve as AgeCurveStrategy, adjust_rate_between_ages
+from apollo.draft.aging import AgeCurve as AgeCurveStrategy
+from apollo.draft.aging import adjust_rate_between_ages
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
 from apollo.draft.projections import ProjectionError
 
