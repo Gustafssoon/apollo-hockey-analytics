@@ -99,6 +99,14 @@ class NHLStatsAdapter:
         "takeaways": "takeaways",
         "giveaways": "giveaways",
     }
+    SKATER_STRENGTH_TOI_FIELDS: ClassVar[dict[str, str]] = {
+        "evTimeOnIce": "evenStrengthTimeOnIce",
+        "evTimeOnIcePerGame": "evenStrengthTimeOnIcePerGame",
+        "ppTimeOnIce": "powerPlayTimeOnIce",
+        "ppTimeOnIcePerGame": "powerPlayTimeOnIcePerGame",
+        "shTimeOnIce": "shortHandedTimeOnIce",
+        "shTimeOnIcePerGame": "shortHandedTimeOnIcePerGame",
+    }
     GOALIE_SUMMARY_FIELDS: ClassVar[dict[str, str]] = {
         "gamesPlayed": "gamesPlayed",
         "gamesStarted": "gamesStarted",
@@ -452,6 +460,11 @@ class NHLStatsAdapter:
             stats_by_player,
             self._fetch_report("skater", "realtime", season, game_type),
             self.SKATER_REALTIME_FIELDS,
+        )
+        self._merge_report(
+            stats_by_player,
+            self._fetch_report("skater", "timeonice", season, game_type),
+            self.SKATER_STRENGTH_TOI_FIELDS,
         )
         return self._to_lines(stats_by_player)
 

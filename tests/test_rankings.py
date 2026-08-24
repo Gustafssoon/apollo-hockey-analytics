@@ -64,6 +64,16 @@ def test_stats_adapter_merges_summary_realtime_and_goalies():
                     }
                 ]
             }
+        if "/skater/timeonice?" in url:
+            return {
+                "data": [
+                    {
+                        "playerId": 8478402,
+                        "ppTimeOnIce": 18000,
+                        "ppTimeOnIcePerGame": 220,
+                    }
+                ]
+            }
         if "/goalie/summary?" in url:
             return {
                 "data": [
@@ -87,6 +97,7 @@ def test_stats_adapter_merges_summary_realtime_and_goalies():
     assert skater_stats["powerPlayPoints"] == 54
     assert skater_stats["hits"] == 55
     assert skater_stats["blockedShots"] == 31
+    assert skater_stats["powerPlayTimeOnIcePerGame"] == 220
 
     goalie_stats = {stat.name: stat.value for stat in goalies[0].stats}
     assert goalie_stats["savePctg"] == 0.912
