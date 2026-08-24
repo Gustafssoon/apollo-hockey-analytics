@@ -64,6 +64,8 @@ def _draft_project(args: argparse.Namespace) -> None:
     print(f"Source seasons: {seasons}")
     print(f"Model: {projection.model_version}")
     print(f"Availability: {projection.availability_model_version}")
+    age_model = projection.age_model_version or "not applied (birth date unavailable)"
+    print(f"Age: {age_model}")
 
 
 def main(argv: list[str] | None = None) -> None:
