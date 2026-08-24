@@ -1,0 +1,30 @@
+league:
+  name: Apollo Test League
+  teams: 12
+
+draft:
+  type: snake
+  my_slot: 8
+  rounds: 16
+
+roster:
+  C: 2
+  LW: 2
+  RW: 2
+  D: 4
+  G: 2
+  BN: 4
+
+scoring:
+  skaters:
+    G: 6
+    A: 4
+    PPP: 2
+    SOG: 0.5
+    HIT: 0.5
+    BLK: 0.5
+  goalies:
+    W: 4
+    SV: 0.4
+    GA: -1.5
+    SO: 3
