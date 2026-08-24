@@ -1,3 +1,7 @@
+from apollo.services.advanced_signal_backtest import (
+    run_advanced_signal_aggregate,
+    run_advanced_signal_backtest,
+)
 from apollo.services.advanced_stats import NHLAdvancedStatsSyncResult, sync_nhl_advanced_stats
 from apollo.services.age_backtest import run_age_baseline_backtest
 from apollo.services.age_model_backtest import run_age_model_aggregate, run_age_model_backtest
@@ -33,6 +37,8 @@ __all__ = [
     "NHLSyncResult",
     "SyncResult",
     "project_skater",
+    "run_advanced_signal_aggregate",
+    "run_advanced_signal_backtest",
     "run_age_baseline_backtest",
     "run_age_model_aggregate",
     "run_age_model_backtest",
