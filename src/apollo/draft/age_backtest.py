@@ -68,7 +68,7 @@ def _curve_level(
     return max(0.50, value)
 
 
-def _age_adjusted_rate(
+def age_adjusted_rate(
     *,
     observed_rate: float,
     source_age: float,
@@ -146,7 +146,7 @@ def build_age_backtest_result(
                 rate = points / games_played
                 weighted_rates.append(
                     (
-                        _age_adjusted_rate(
+                        age_adjusted_rate(
                             observed_rate=rate,
                             source_age=source_age,
                             target_age=player.target_age,
