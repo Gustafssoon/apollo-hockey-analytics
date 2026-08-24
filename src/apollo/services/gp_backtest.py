@@ -4,9 +4,9 @@ from apollo.db import Database
 from apollo.draft.gp_backtest import (
     GPBacktestPlayer,
     GPBacktestResult,
+    build_gp_backtest_result,
     normalize_games_to_82,
     regular_season_game_limit,
-    build_gp_backtest_result,
 )
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
