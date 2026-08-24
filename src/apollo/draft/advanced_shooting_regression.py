@@ -1,12 +1,31 @@
 from dataclasses import dataclass
 
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
-from apollo.draft.projections import DEFAULT_SEASON_WEIGHTS, ProjectionError
+from apollo.draft.projections import ProjectionError
+from apollo.draft.shooting_context import (
+    SHOOTING_CONTEXT_SEASON_WEIGHTS,
+    correction_factor,
+)
+from apollo.draft.shooting_context import (
+    build_shooting_context_ratio as _build_shooting_context_ratio,
+)
 
 CORRECTION_STRENGTHS = (0.10, 0.25, 0.50)
 CORRECTION_SCOPES = ("goals", "offense")
-MIN_CORRECTION_FACTOR = 0.80
-MAX_CORRECTION_FACTOR = 1.20
+
+
+def build_shooting_context_ratio(
+    history: tuple[tuple[float, float], ...],
+    *,
+    min_signal_seasons: int = 3,
+    season_weights: tuple[float, ...] = SHOOTING_CONTEXT_SEASON_WEIGHTS,
+) -> float | None:
+    """Compatibility wrapper around the production shooting-context implementation."""
+    return _build_shooting_context_ratio(
+        history,
+        min_signal_seasons=min_signal_seasons,
+        season_weights=season_weights,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,39 +88,6 @@ class ShootingRegressionAggregateResult:
     player_seasons: int
     baseline_player_seasons: int
     strategies: tuple[ShootingRegressionAggregateStrategy, ...]
-
-
-def correction_factor(context_ratio: float, strength: float) -> float:
-    if context_ratio <= 0:
-        raise ProjectionError("Shooting context ratio must be positive")
-    if strength < 0:
-        raise ProjectionError("Shooting correction strength must be non-negative")
-    factor = 1.0 - strength * (context_ratio - 1.0)
-    return min(MAX_CORRECTION_FACTOR, max(MIN_CORRECTION_FACTOR, factor))
-
-
-def build_shooting_context_ratio(
-    history: tuple[tuple[float, float], ...],
-    *,
-    min_signal_seasons: int = 3,
-    season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
-) -> float | None:
-    if len(history) > len(season_weights):
-        raise ProjectionError("More shooting history seasons than configured season weights")
-    if min_signal_seasons < 1:
-        raise ProjectionError("min_signal_seasons must be >= 1")
-
-    values: list[tuple[float, float]] = []
-    for index, (shooting_pct, prior_pct) in enumerate(history):
-        if shooting_pct <= 0 or prior_pct <= 0:
-            continue
-        values.append((shooting_pct / prior_pct, season_weights[index]))
-    if len(values) < min_signal_seasons:
-        return None
-    weight_sum = sum(weight for _, weight in values)
-    if weight_sum <= 0:
-        return None
-    return sum(value * weight for value, weight in values) / weight_sum
 
 
 def _strategy_projection(

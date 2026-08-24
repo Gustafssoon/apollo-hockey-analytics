@@ -8,7 +8,10 @@ from apollo.draft.projections import (
     build_skater_projection,
     previous_seasons,
 )
+from apollo.draft.regression import position_group
+from apollo.draft.shooting_context import build_shooting_context_ratio
 from apollo.services.regression import load_position_priors
+from apollo.services.shooting_context import load_shooting_context_priors
 
 
 def project_skater(
@@ -24,6 +27,7 @@ def project_skater(
     source_seasons = previous_seasons(target_season)
     placeholders = ", ".join("?" for _ in source_seasons)
     regression_priors = load_position_priors(database, source_seasons)
+    shooting_priors = load_shooting_context_priors(database, source_seasons)
 
     with database.connect() as connection:
         players = connection.execute(
@@ -84,6 +88,8 @@ def project_skater(
         by_season.setdefault(season, {})[str(row["stat_name"])] = float(row["value"])
 
     history: list[ProjectionSeason] = []
+    group = position_group(position)
+    context_history: list[tuple[float, float]] = []
     for season in source_seasons:
         stats = by_season.get(season, {})
         history.append(
@@ -93,6 +99,17 @@ def project_skater(
                 stats=stats,
             )
         )
+        context_history.append(
+            (
+                stats.get("shootingPct5v5", 0.0),
+                shooting_priors.get((season, group), 0.0),
+            )
+        )
+
+    try:
+        shooting_context_ratio = build_shooting_context_ratio(tuple(context_history))
+    except ValueError as exc:
+        raise ProjectionError(str(exc)) from exc
 
     return build_skater_projection(
         player_id=int(player["id"]),
@@ -103,4 +120,5 @@ def project_skater(
         history=tuple(history),
         birth_date=birth_date,
         regression_priors=regression_priors,
+        shooting_context_ratio=shooting_context_ratio,
     )
