@@ -33,6 +33,10 @@ from apollo.services.nhl_sync import NHLSyncResult, sync_nhl_players
 from apollo.services.recent_form import NHLRecentFormSyncResult, sync_nhl_recent_form
 from apollo.services.season_stats import NHLCategoryStatsSyncResult, sync_nhl_category_stats
 from apollo.services.sync import SyncResult, sync_league
+from apollo.services.v05_candidate import (
+    run_v05_candidate_aggregate,
+    run_v05_candidate_backtest,
+)
 
 __all__ = [
     "NHLAdvancedStatsSyncResult",
@@ -59,6 +63,8 @@ __all__ = [
     "run_shooting_regression_aggregate",
     "run_shooting_regression_backtest",
     "run_skater_backtest",
+    "run_v05_candidate_aggregate",
+    "run_v05_candidate_backtest",
     "sync_league",
     "sync_nhl_advanced_stats",
     "sync_nhl_category_stats",
