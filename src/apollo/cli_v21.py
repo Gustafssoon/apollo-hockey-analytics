@@ -1,6 +1,7 @@
 import argparse
 
 from apollo import cli_v20 as v20_cli
+from apollo.cli_v18 import STAT_LABELS
 from apollo.db import Database
 from apollo.draft.projections import SKATER_PROJECTION_STATS, ProjectionError
 from apollo.services.regression_backtest import run_regression_backtest
@@ -96,8 +97,7 @@ def _draft_regression_backtest(args: argparse.Namespace) -> None:
         best_metric = _metric(best, stat_name)
         baseline_metric = _metric(baseline, stat_name)
         print(
-            f"{v20_cli.v19_cli.v18_cli.STAT_LABELS[stat_name]:<5} "
-            f"{best.strategy_name:<18} {best_metric.mae:>8.2f} "
+            f"{STAT_LABELS[stat_name]:<5} {best.strategy_name:<18} {best_metric.mae:>8.2f} "
             f"{baseline_metric.mae - best_metric.mae:>+8.2f}"
         )
 
