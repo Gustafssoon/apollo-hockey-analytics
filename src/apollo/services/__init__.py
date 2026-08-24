@@ -2,6 +2,7 @@ from apollo.services.age_backtest import run_age_baseline_backtest
 from apollo.services.age_model_backtest import run_age_model_aggregate, run_age_model_backtest
 from apollo.services.age_stat_aggregate import run_age_stat_aggregate
 from apollo.services.age_stat_backtest import run_age_stat_backtest
+from apollo.services.deployment_backtest import run_deployment_backtest
 from apollo.services.draft_backtest import run_skater_backtest
 from apollo.services.draft_projections import project_skater
 from apollo.services.gp_backtest import run_gp_baseline_backtest
@@ -35,6 +36,7 @@ __all__ = [
     "run_age_model_backtest",
     "run_age_stat_aggregate",
     "run_age_stat_backtest",
+    "run_deployment_backtest",
     "run_gp_baseline_backtest",
     "run_skater_backtest",
     "sync_league",
