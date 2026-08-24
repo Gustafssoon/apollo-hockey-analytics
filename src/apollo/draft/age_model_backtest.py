@@ -2,8 +2,11 @@ from dataclasses import dataclass
 
 from apollo.draft.age_backtest import AGE_CURVE_STRATEGIES, age_adjusted_rate
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
-from apollo.draft.projections import DEFAULT_SEASON_WEIGHTS, SKATER_PROJECTION_STATS, ProjectionError
-
+from apollo.draft.projections import (
+    DEFAULT_SEASON_WEIGHTS,
+    SKATER_PROJECTION_STATS,
+    ProjectionError,
+)
 
 AGE_MODEL_CANDIDATES: dict[str, dict[str, str]] = {
     "neutral": {stat: "neutral" for stat in SKATER_PROJECTION_STATS},
