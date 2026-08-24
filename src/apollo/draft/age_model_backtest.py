@@ -60,6 +60,21 @@ class AgeModelBacktestResult:
     candidates: tuple[AgeModelCandidateResult, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class AgeModelAggregateCandidate:
+    candidate_name: str
+    metrics: tuple[AgeModelMetric, ...]
+    top25_overlap_rate: float
+    raw_stats_improved: int
+
+
+@dataclass(frozen=True, slots=True)
+class AgeModelAggregateResult:
+    target_seasons: tuple[int, ...]
+    total_player_seasons: int
+    candidates: tuple[AgeModelAggregateCandidate, ...]
+
+
 def _curve(name: str):
     return next(strategy for strategy in AGE_CURVE_STRATEGIES if strategy.name == name)
 
@@ -191,4 +206,76 @@ def build_age_model_backtest_result(
         source_seasons=source_seasons,
         evaluated_players=len(players),
         candidates=tuple(candidate_results),
+    )
+
+
+def build_age_model_aggregate(
+    results: tuple[AgeModelBacktestResult, ...],
+) -> AgeModelAggregateResult:
+    if not results:
+        raise ProjectionError("Age model aggregate requires at least one backtest result")
+
+    total_players = sum(result.evaluated_players for result in results)
+    if total_players <= 0:
+        raise ProjectionError("Age model aggregate requires evaluated players")
+
+    candidate_names = tuple(AGE_MODEL_CANDIDATES)
+    aggregate_metrics: dict[str, dict[str, AgeModelMetric]] = {}
+    top25_rates: dict[str, float] = {}
+
+    for candidate_name in candidate_names:
+        stat_metrics: dict[str, AgeModelMetric] = {}
+        for stat_name in ("points", *SKATER_PROJECTION_STATS):
+            weighted_mae = 0.0
+            weighted_rho = 0.0
+            rho_weight = 0
+            for result in results:
+                candidate = next(
+                    item for item in result.candidates if item.candidate_name == candidate_name
+                )
+                metric = next(item for item in candidate.metrics if item.stat_name == stat_name)
+                weighted_mae += metric.mae * result.evaluated_players
+                if metric.spearman_rho is not None:
+                    weighted_rho += metric.spearman_rho * result.evaluated_players
+                    rho_weight += result.evaluated_players
+            stat_metrics[stat_name] = AgeModelMetric(
+                stat_name=stat_name,
+                mae=weighted_mae / total_players,
+                spearman_rho=(weighted_rho / rho_weight if rho_weight else None),
+            )
+        aggregate_metrics[candidate_name] = stat_metrics
+
+        overlap = 0
+        compared = 0
+        for result in results:
+            candidate = next(
+                item for item in result.candidates if item.candidate_name == candidate_name
+            )
+            top25 = next(item for item in candidate.top_k_points if item.requested_k == 25)
+            overlap += top25.overlap
+            compared += top25.compared_k
+        top25_rates[candidate_name] = overlap / compared
+
+    neutral_metrics = aggregate_metrics["neutral"]
+    candidates: list[AgeModelAggregateCandidate] = []
+    for candidate_name in candidate_names:
+        metrics = aggregate_metrics[candidate_name]
+        raw_stats_improved = sum(
+            1
+            for stat in SKATER_PROJECTION_STATS
+            if metrics[stat].mae < neutral_metrics[stat].mae
+        )
+        candidates.append(
+            AgeModelAggregateCandidate(
+                candidate_name=candidate_name,
+                metrics=tuple(metrics[stat] for stat in ("points", *SKATER_PROJECTION_STATS)),
+                top25_overlap_rate=top25_rates[candidate_name],
+                raw_stats_improved=raw_stats_improved,
+            )
+        )
+
+    return AgeModelAggregateResult(
+        target_seasons=tuple(result.target_season for result in results),
+        total_player_seasons=total_players,
+        candidates=tuple(candidates),
     )
