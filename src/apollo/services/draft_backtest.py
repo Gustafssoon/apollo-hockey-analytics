@@ -135,10 +135,7 @@ def run_skater_backtest(
                 skipped_incomplete_history += 1
                 continue
         try:
-            shooting_context_ratio = build_shooting_context_ratio(
-                tuple(context_history),
-                min_signal_seasons=min_history_seasons,
-            )
+            shooting_context_ratio = build_shooting_context_ratio(tuple(context_history))
             projection = build_skater_projection(
                 player_id=player_id,
                 player_name=player_name,
