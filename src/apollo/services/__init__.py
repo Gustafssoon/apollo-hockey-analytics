@@ -1,4 +1,5 @@
 from apollo.services.age_backtest import run_age_baseline_backtest
+from apollo.services.age_stat_backtest import run_age_stat_backtest
 from apollo.services.draft_backtest import run_skater_backtest
 from apollo.services.draft_projections import project_skater
 from apollo.services.gp_backtest import run_gp_baseline_backtest
@@ -28,6 +29,7 @@ __all__ = [
     "SyncResult",
     "project_skater",
     "run_age_baseline_backtest",
+    "run_age_stat_backtest",
     "run_gp_baseline_backtest",
     "run_skater_backtest",
     "sync_league",
