@@ -4,6 +4,8 @@ from apollo.adapters.nhl_stats import NHLSeasonStatLine, NHLStatsAdapter
 
 
 class NHLAdvancedStatsAdapter(NHLStatsAdapter):
+    REPORT_TIMEOUT_ATTEMPTS = 3
+
     SKATER_SUMMARY_SHOOTING_FIELDS: ClassVar[dict[str, str]] = {
         "satFor": "shotAttemptsFor5v5",
         "satAgainst": "shotAttemptsAgainst5v5",
@@ -58,6 +60,23 @@ class NHLAdvancedStatsAdapter(NHLStatsAdapter):
         "shootingPctWrist": "shootingPctWrist",
     }
 
+    def _fetch_advanced_report(
+        self,
+        report: str,
+        season: int,
+        game_type: int,
+    ) -> list[dict[str, object]]:
+        for attempt in range(1, self.REPORT_TIMEOUT_ATTEMPTS + 1):
+            try:
+                return self._fetch_report("skater", report, season, game_type)
+            except TimeoutError as exc:
+                if attempt == self.REPORT_TIMEOUT_ATTEMPTS:
+                    raise TimeoutError(
+                        f"NHL advanced stats request timed out after "
+                        f"{self.REPORT_TIMEOUT_ATTEMPTS} attempts: skater/{report}"
+                    ) from exc
+        raise RuntimeError("Unreachable advanced stats retry state")
+
     def fetch_skater_advanced_stats(
         self,
         season: int,
@@ -66,22 +85,22 @@ class NHLAdvancedStatsAdapter(NHLStatsAdapter):
         stats_by_player: dict[int, dict[str, float]] = {}
         self._merge_report(
             stats_by_player,
-            self._fetch_report("skater", "summaryshooting", season, game_type),
+            self._fetch_advanced_report("summaryshooting", season, game_type),
             self.SKATER_SUMMARY_SHOOTING_FIELDS,
         )
         self._merge_report(
             stats_by_player,
-            self._fetch_report("skater", "percentages", season, game_type),
+            self._fetch_advanced_report("percentages", season, game_type),
             self.SKATER_PERCENTAGE_FIELDS,
         )
         self._merge_report(
             stats_by_player,
-            self._fetch_report("skater", "scoringRates", season, game_type),
+            self._fetch_advanced_report("scoringRates", season, game_type),
             self.SKATER_SCORING_RATE_FIELDS,
         )
         self._merge_report(
             stats_by_player,
-            self._fetch_report("skater", "shottype", season, game_type),
+            self._fetch_advanced_report("shottype", season, game_type),
             self.SKATER_SHOT_TYPE_FIELDS,
         )
         return self._to_lines(stats_by_player)
