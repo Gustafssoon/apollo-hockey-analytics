@@ -2,7 +2,11 @@ from collections import defaultdict
 from datetime import date
 
 from apollo.db import Database
-from apollo.draft.age_backtest import AgeBacktestPlayer, AgeBacktestResult, build_age_backtest_result
+from apollo.draft.age_backtest import (
+    AgeBacktestPlayer,
+    AgeBacktestResult,
+    build_age_backtest_result,
+)
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
     SKATER_PROJECTION_STATS,
