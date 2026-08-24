@@ -4,8 +4,10 @@ from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_corr
 from apollo.draft.projections import ProjectionError
 from apollo.draft.shooting_context import (
     SHOOTING_CONTEXT_SEASON_WEIGHTS,
-    build_shooting_context_ratio as _build_shooting_context_ratio,
     correction_factor,
+)
+from apollo.draft.shooting_context import (
+    build_shooting_context_ratio as _build_shooting_context_ratio,
 )
 
 CORRECTION_STRENGTHS = (0.10, 0.25, 0.50)
