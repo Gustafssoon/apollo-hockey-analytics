@@ -26,6 +26,8 @@ class BacktestMetric:
     stat_name: str
     mae: float
     spearman_rho: float | None
+    oracle_gp_mae: float | None
+    oracle_gp_spearman_rho: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +52,7 @@ class ProjectionBacktestResult:
     skipped_incomplete_history: int
     metrics: tuple[BacktestMetric, ...]
     top_k_points: tuple[TopKOverlap, ...]
+    oracle_gp_top_k_points: tuple[TopKOverlap, ...]
 
 
 def _average_ranks(values: list[float]) -> list[float]:
@@ -100,6 +103,39 @@ def _stat_value(player: BacktestPlayer, stat_name: str, *, projected: bool) -> f
     return stats[stat_name]
 
 
+def _oracle_gp_stat_value(player: BacktestPlayer, stat_name: str) -> float:
+    if stat_name == "gamesPlayed":
+        return player.actual_games
+    if player.projected_games <= 0:
+        raise ProjectionError(
+            f"Actual-GP oracle requires positive projected games for {player.player_name}"
+        )
+    projected_total = _stat_value(player, stat_name, projected=True)
+    projected_rate = projected_total / player.projected_games
+    return projected_rate * player.actual_games
+
+
+def _top_k_overlaps(
+    projected_order: list[BacktestPlayer],
+    actual_order: list[BacktestPlayer],
+) -> tuple[TopKOverlap, ...]:
+    overlaps: list[TopKOverlap] = []
+    for requested_k in TOP_K_CUTOFFS:
+        compared_k = min(requested_k, len(projected_order))
+        projected_ids = {player.player_id for player in projected_order[:compared_k]}
+        actual_ids = {player.player_id for player in actual_order[:compared_k]}
+        overlap = len(projected_ids & actual_ids)
+        overlaps.append(
+            TopKOverlap(
+                requested_k=requested_k,
+                compared_k=compared_k,
+                overlap=overlap,
+                overlap_rate=overlap / compared_k,
+            )
+        )
+    return tuple(overlaps)
+
+
 def build_backtest_result(
     *,
     target_season: int,
@@ -125,38 +161,42 @@ def build_backtest_result(
             abs(projected - actual)
             for projected, actual in zip(projected_values, actual_values, strict=True)
         ) / len(players)
+
+        oracle_gp_mae: float | None = None
+        oracle_gp_spearman_rho: float | None = None
+        if stat_name != "gamesPlayed":
+            oracle_values = [_oracle_gp_stat_value(player, stat_name) for player in players]
+            oracle_gp_mae = sum(
+                abs(projected - actual)
+                for projected, actual in zip(oracle_values, actual_values, strict=True)
+            ) / len(players)
+            oracle_gp_spearman_rho = spearman_rank_correlation(oracle_values, actual_values)
+
         metrics.append(
             BacktestMetric(
                 stat_name=stat_name,
                 mae=mae,
                 spearman_rho=spearman_rank_correlation(projected_values, actual_values),
+                oracle_gp_mae=oracle_gp_mae,
+                oracle_gp_spearman_rho=oracle_gp_spearman_rho,
             )
         )
 
-    projected_order = sorted(
-        players,
-        key=lambda player: (_stat_value(player, "points", projected=True), player.player_id),
-        reverse=True,
-    )
     actual_order = sorted(
         players,
         key=lambda player: (_stat_value(player, "points", projected=False), player.player_id),
         reverse=True,
     )
-    top_k_points: list[TopKOverlap] = []
-    for requested_k in TOP_K_CUTOFFS:
-        compared_k = min(requested_k, len(players))
-        projected_ids = {player.player_id for player in projected_order[:compared_k]}
-        actual_ids = {player.player_id for player in actual_order[:compared_k]}
-        overlap = len(projected_ids & actual_ids)
-        top_k_points.append(
-            TopKOverlap(
-                requested_k=requested_k,
-                compared_k=compared_k,
-                overlap=overlap,
-                overlap_rate=overlap / compared_k,
-            )
-        )
+    projected_order = sorted(
+        players,
+        key=lambda player: (_stat_value(player, "points", projected=True), player.player_id),
+        reverse=True,
+    )
+    oracle_gp_order = sorted(
+        players,
+        key=lambda player: (_oracle_gp_stat_value(player, "points"), player.player_id),
+        reverse=True,
+    )
 
     return ProjectionBacktestResult(
         target_season=target_season,
@@ -170,5 +210,6 @@ def build_backtest_result(
         history_counts=history_counts,
         skipped_incomplete_history=skipped_incomplete_history,
         metrics=tuple(metrics),
-        top_k_points=tuple(top_k_points),
+        top_k_points=_top_k_overlaps(projected_order, actual_order),
+        oracle_gp_top_k_points=_top_k_overlaps(oracle_gp_order, actual_order),
     )
