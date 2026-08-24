@@ -11,7 +11,10 @@ from apollo.draft.projections import (
     build_skater_projection,
     previous_seasons,
 )
+from apollo.draft.regression import position_group
+from apollo.draft.shooting_context import build_shooting_context_ratio
 from apollo.services.regression import load_position_priors
+from apollo.services.shooting_context import load_shooting_context_priors
 
 
 def run_skater_backtest(
@@ -31,6 +34,7 @@ def run_skater_backtest(
     database.initialize()
     source_seasons = previous_seasons(target_season, len(DEFAULT_SEASON_WEIGHTS))
     regression_priors = load_position_priors(database, source_seasons)
+    shooting_priors = load_shooting_context_priors(database, source_seasons)
     seasons = (target_season, *source_seasons)
     placeholders = ", ".join("?" for _ in seasons)
 
@@ -95,7 +99,10 @@ def run_skater_backtest(
 
         actual_eligible_players += 1
         history: list[ProjectionSeason] = []
+        context_history: list[tuple[float, float]] = []
         usable_history_seasons = 0
+        first_name, last_name, team_abbrev, position, birth_date_text = player_meta[player_id]
+        group = position_group(position)
         for season in source_seasons:
             season_stats = seasons_by_stat.get(season, {})
             games_played = season_stats.get("gamesPlayed", 0.0)
@@ -108,12 +115,17 @@ def run_skater_backtest(
                     stats=season_stats,
                 )
             )
+            context_history.append(
+                (
+                    season_stats.get("shootingPct5v5", 0.0),
+                    shooting_priors.get((season, group), 0.0),
+                )
+            )
 
         history_counts[usable_history_seasons] += 1
         if usable_history_seasons < min_history_seasons:
             continue
 
-        first_name, last_name, team_abbrev, position, birth_date_text = player_meta[player_id]
         player_name = f"{first_name} {last_name}"
         birth_date: date | None = None
         if birth_date_text:
@@ -123,6 +135,10 @@ def run_skater_backtest(
                 skipped_incomplete_history += 1
                 continue
         try:
+            shooting_context_ratio = build_shooting_context_ratio(
+                tuple(context_history),
+                min_signal_seasons=min_history_seasons,
+            )
             projection = build_skater_projection(
                 player_id=player_id,
                 player_name=player_name,
@@ -132,8 +148,9 @@ def run_skater_backtest(
                 history=tuple(history),
                 birth_date=birth_date,
                 regression_priors=regression_priors,
+                shooting_context_ratio=shooting_context_ratio,
             )
-        except ProjectionError:
+        except (ProjectionError, ValueError):
             skipped_incomplete_history += 1
             continue
 
