@@ -105,20 +105,22 @@ def test_previous_seasons_for_target_season():
     assert previous_seasons(20262027) == (20252026, 20242025, 20232024)
 
 
-def test_three_season_skater_projection_uses_weighted_per_game_rates(tmp_path):
+def test_three_season_skater_projection_uses_weighted_rates_and_availability(tmp_path):
     database = Database(tmp_path / "apollo.db")
     _seed_three_seasons(database)
 
     projection = project_skater(database, "Connor McDavid", 20262027)
 
-    assert projection.projected_games == pytest.approx(75.0)
-    assert projection.stats["goals"] == pytest.approx(33.75)
-    assert projection.stats["assists"] == pytest.approx(67.5)
-    assert projection.stats["powerPlayPoints"] == pytest.approx(33.75)
-    assert projection.stats["shots"] == pytest.approx(225.0)
-    assert projection.stats["hits"] == pytest.approx(75.0)
-    assert projection.stats["blockedShots"] == pytest.approx(37.5)
+    assert projection.projected_games == pytest.approx(78.5)
+    assert projection.stats["goals"] == pytest.approx(35.325)
+    assert projection.stats["assists"] == pytest.approx(70.65)
+    assert projection.stats["powerPlayPoints"] == pytest.approx(35.325)
+    assert projection.stats["shots"] == pytest.approx(235.5)
+    assert projection.stats["hits"] == pytest.approx(78.5)
+    assert projection.stats["blockedShots"] == pytest.approx(39.25)
     assert projection.source_seasons == (20252026, 20242025, 20232024)
+    assert projection.model_version == "apollo-skater-baseline-v0.2"
+    assert projection.availability_model_version == "apollo-availability-shrink50-v0.1"
 
 
 def test_missing_latest_season_keeps_calendar_weights(tmp_path):
@@ -151,8 +153,8 @@ def test_missing_latest_season_keeps_calendar_weights(tmp_path):
 
     projection = project_skater(database, "Connor McDavid", 20262027)
 
-    assert projection.projected_games == pytest.approx(67.5)
-    assert projection.stats["goals"] == pytest.approx(25.3125)
+    assert projection.projected_games == pytest.approx(74.75)
+    assert projection.stats["goals"] == pytest.approx(28.03125)
     assert projection.source_seasons == (20242025, 20232024)
 
 
@@ -192,11 +194,12 @@ def test_draft_project_cli(tmp_path, capsys):
     assert "APOLLO DRAFT PROJECTION" in output
     assert "Connor McDavid | C | EDM" in output
     assert "Target season: 2026-27" in output
-    assert "Projected GP   75.0" in output
-    assert "G              33.8" in output
-    assert "A              67.5" in output
+    assert "Projected GP   78.5" in output
+    assert "G              35.3" in output
+    assert "A              70.7" in output
     assert "Source seasons: 2025-26, 2024-25, 2023-24" in output
-    assert "apollo-skater-baseline-v0.1" in output
+    assert "apollo-skater-baseline-v0.2" in output
+    assert "apollo-availability-shrink50-v0.1" in output
 
 
 def test_existing_draft_config_command_still_routes_through_v11(tmp_path, capsys):

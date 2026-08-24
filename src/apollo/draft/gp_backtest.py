@@ -1,13 +1,9 @@
 from dataclasses import dataclass
 from statistics import median
 
+from apollo.draft.availability import STANDARD_NHL_GAMES
 from apollo.draft.backtest import TOP_K_CUTOFFS, TopKOverlap, spearman_rank_correlation
 from apollo.draft.projections import DEFAULT_SEASON_WEIGHTS, ProjectionError
-
-STANDARD_NHL_GAMES = 82
-_SHORTENED_SEASON_GAME_LIMITS = {
-    20202021: 56,
-}
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,25 +34,6 @@ class GPBacktestResult:
     strategies: tuple[GPStrategyResult, ...]
 
 
-def regular_season_game_limit(season: int) -> int:
-    if season in _SHORTENED_SEASON_GAME_LIMITS:
-        return _SHORTENED_SEASON_GAME_LIMITS[season]
-    if season >= 20212022:
-        return STANDARD_NHL_GAMES
-    raise ProjectionError(
-        f"GP season normalization does not support NHL season {season}; "
-        "add its regular-season game limit explicitly"
-    )
-
-
-def normalize_games_to_82(season: int, games_played: float) -> float:
-    if games_played < 0:
-        raise ProjectionError("games_played must be >= 0")
-    season_limit = regular_season_game_limit(season)
-    availability = min(1.0, games_played / season_limit)
-    return availability * STANDARD_NHL_GAMES
-
-
 def _weighted_games(history_games: tuple[float, ...]) -> float:
     if len(history_games) != len(DEFAULT_SEASON_WEIGHTS):
         raise ProjectionError(
@@ -81,16 +58,16 @@ def _predict_games(strategy: str, history_games: tuple[float, ...]) -> float:
     elif strategy == "max":
         value = max(history_games)
     elif strategy == "fixed_82":
-        value = 82.0
+        value = float(STANDARD_NHL_GAMES)
     elif strategy == "shrink25_to_82":
-        value = 0.75 * weighted + 0.25 * 82.0
+        value = 0.75 * weighted + 0.25 * STANDARD_NHL_GAMES
     elif strategy == "shrink50_to_82":
-        value = 0.50 * weighted + 0.50 * 82.0
+        value = 0.50 * weighted + 0.50 * STANDARD_NHL_GAMES
     elif strategy == "shrink75_to_82":
-        value = 0.25 * weighted + 0.75 * 82.0
+        value = 0.25 * weighted + 0.75 * STANDARD_NHL_GAMES
     else:
         raise ProjectionError(f"Unknown GP strategy: {strategy}")
-    return min(82.0, max(0.0, value))
+    return min(float(STANDARD_NHL_GAMES), max(0.0, value))
 
 
 def _top_k_overlaps(

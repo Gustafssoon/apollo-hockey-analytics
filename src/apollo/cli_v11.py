@@ -63,6 +63,7 @@ def _draft_project(args: argparse.Namespace) -> None:
     seasons = ", ".join(_season_label(season) for season in projection.source_seasons)
     print(f"Source seasons: {seasons}")
     print(f"Model: {projection.model_version}")
+    print(f"Availability: {projection.availability_model_version}")
 
 
 def main(argv: list[str] | None = None) -> None:

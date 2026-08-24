@@ -1,13 +1,8 @@
 from collections import defaultdict
 
 from apollo.db import Database
-from apollo.draft.gp_backtest import (
-    GPBacktestPlayer,
-    GPBacktestResult,
-    build_gp_backtest_result,
-    normalize_games_to_82,
-    regular_season_game_limit,
-)
+from apollo.draft.availability import normalize_games_to_82, regular_season_game_limit
+from apollo.draft.gp_backtest import GPBacktestPlayer, GPBacktestResult, build_gp_backtest_result
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
     SKATER_PROJECTION_STATS,

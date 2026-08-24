@@ -106,9 +106,9 @@ def test_backtest_uses_only_actual_eligible_skaters_with_required_history(tmp_pa
     assert dict(result.history_counts) == {0: 0, 1: 0, 2: 1, 3: 2}
 
     metrics = {metric.stat_name: metric for metric in result.metrics}
-    assert metrics["gamesPlayed"].mae == pytest.approx(5.0)
+    assert metrics["gamesPlayed"].mae == pytest.approx(1.0)
     assert metrics["gamesPlayed"].oracle_gp_mae is None
-    assert metrics["goals"].mae == pytest.approx(3.5)
+    assert metrics["goals"].mae == pytest.approx(6.0)
     assert metrics["goals"].oracle_gp_mae == pytest.approx(6.0)
     assert metrics["points"].spearman_rho == pytest.approx(1.0)
     assert metrics["points"].oracle_gp_spearman_rho == pytest.approx(1.0)
@@ -206,8 +206,8 @@ def test_draft_backtest_cli(tmp_path, capsys):
     assert "Target season: 2025-26" in output
     assert "Source seasons: 2024-25, 2023-24, 2022-23" in output
     assert "Evaluated: 2/3 (66.7%)" in output
-    assert "GP        5.00" in output
-    assert "G         3.50" in output
+    assert "GP        1.00" in output
+    assert "G         6.00" in output
     assert "PTS      1.000" in output
     assert "Actual-GP Oracle Diagnostic" in output
     assert "GAIN = baseline MAE - oracle MAE" in output
