@@ -8,7 +8,6 @@ from apollo.draft.projections import (
     ProjectionError,
 )
 
-
 AGE_MODEL_CANDIDATES: dict[str, dict[str, str]] = {
     "neutral": {stat: "neutral" for stat in SKATER_PROJECTION_STATS},
     "asymmetric_all": {stat: "asymmetric" for stat in SKATER_PROJECTION_STATS},
