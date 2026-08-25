@@ -47,7 +47,10 @@ def build_parser() -> argparse.ArgumentParser:
     draft_subparsers = _subparsers(draft)
     summary = draft_subparsers.add_parser(
         "goalie-baseline-v02-candidate-summary",
-        help="Integrate approved 5% SV% and GAA rate regressions into goalie baseline v0.2 candidate",
+        help=(
+            "Integrate approved 5% SV% and GAA rate regressions into "
+            "goalie baseline v0.2 candidate"
+        ),
     )
     summary.add_argument("--season", type=int, required=True)
     summary.add_argument("--years", type=int, default=3)
@@ -122,7 +125,10 @@ def _draft_goalie_baseline_v02_candidate_summary(args: argparse.Namespace) -> No
     print("No goalie age workload adjustment, team context, or other tuning is included.")
     print(f"Player-seasons: {result.player_seasons}")
     print()
-    print(f"{'STAT':<8} {'BASE MAE':>10} {'CAND MAE':>10} {'GAIN':>10} {'BASE RHO':>9} {'CAND RHO':>9}")
+    print(
+        f"{'STAT':<8} {'BASE MAE':>10} {'CAND MAE':>10} {'GAIN':>10} "
+        f"{'BASE RHO':>9} {'CAND RHO':>9}"
+    )
     for stat_name in baseline:
         base = baseline[stat_name]
         cand = candidate[stat_name]
@@ -157,7 +163,10 @@ def _draft_goalie_baseline_v02_candidate_summary(args: argparse.Namespace) -> No
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
-    if args.command != "draft" or args.draft_command != "goalie-baseline-v02-candidate-summary":
+    if (
+        args.command != "draft"
+        or args.draft_command != "goalie-baseline-v02-candidate-summary"
+    ):
         v50_cli.main(argv)
         return
     try:
