@@ -37,7 +37,7 @@ def test_goalie_projection_is_strict_603010_workload_and_rates():
     assert projection.projected_starts == pytest.approx(45.0)
     assert projection.stats["wins"] == pytest.approx(25.2)
     assert projection.stats["saves"] == pytest.approx(1350.0)
-    assert projection.stats["goalsAgainst"] == pytest.approx(119.25)
+    assert projection.stats["goalsAgainst"] == pytest.approx(121.5)
     assert projection.stats["shutouts"] == pytest.approx(4.5)
     assert projection.stats["savePctg"] == pytest.approx(0.9174)
     assert projection.stats["goalsAgainstAvg"] == pytest.approx(2.7)
