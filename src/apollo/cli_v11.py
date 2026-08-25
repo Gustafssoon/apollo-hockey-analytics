@@ -72,6 +72,10 @@ def _draft_project(args: argparse.Namespace) -> None:
     print(f"Shooting context: {shooting_model}")
     assist_rate_model = projection.assist_rate_model_version or "not applied (context unavailable)"
     print(f"Assist rate: {assist_rate_model}")
+    finishing_model = projection.overall_finishing_model_version or (
+        "not applied (context unavailable)"
+    )
+    print(f"Overall finishing: {finishing_model}")
 
 
 def main(argv: list[str] | None = None) -> None:
