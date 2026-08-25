@@ -7,8 +7,8 @@ from apollo.draft.goalie_age_candidate_gate import (
     GOALIE_AGE_GATE_COHORTS,
     GOALIE_AGE_GATE_SLOPE,
     GoalieAgeGateAggregate,
-    GoalieAgeGateSeasonResult,
     GoalieAgeGateCohortSpec,
+    GoalieAgeGateSeasonResult,
     build_goalie_age_gate_aggregate,
 )
 from apollo.draft.goalie_baseline import (
@@ -48,9 +48,7 @@ def _in_cohort(
         return False
     if cohort.min_age is not None and (age is None or age < cohort.min_age):
         return False
-    if cohort.max_age is not None and (age is None or age >= cohort.max_age):
-        return False
-    return True
+    return cohort.max_age is None or (age is not None and age < cohort.max_age)
 
 
 def run_goalie_age_candidate_gate_season(
