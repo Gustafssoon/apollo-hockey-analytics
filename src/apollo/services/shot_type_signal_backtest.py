@@ -26,6 +26,16 @@ from apollo.services.regression import load_position_priors
 from apollo.services.shooting_context import load_shooting_context_priors
 
 
+def _shot_type_source_stats(stats: dict[str, float]) -> dict[str, float]:
+    """Use canonical source-season totals when the NHL shottype report omits them."""
+    normalized = dict(stats)
+    if "shotTypeShots" not in normalized and "shots" in normalized:
+        normalized["shotTypeShots"] = normalized["shots"]
+    if "shotTypeGoals" not in normalized and "goals" in normalized:
+        normalized["shotTypeGoals"] = normalized["goals"]
+    return normalized
+
+
 def run_shot_type_signal_backtest(
     database: Database,
     target_season: int,
@@ -123,7 +133,7 @@ def run_shot_type_signal_backtest(
                     stats=season_stats,
                 )
             )
-            shot_type_history.append(season_stats)
+            shot_type_history.append(_shot_type_source_stats(season_stats))
             shooting_history.append(
                 (
                     season_stats.get("shootingPct5v5", 0.0),
