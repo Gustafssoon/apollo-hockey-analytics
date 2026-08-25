@@ -22,7 +22,10 @@ from apollo.services.goalie_rate_candidate import run_goalie_rate_candidate_aggr
 
 
 def test_goalie_baseline_v02_components_are_locked():
-    assert GOALIE_BASELINE_V02_CANDIDATE_VERSION == "apollo-goalie-baseline-v0.2-candidate"
+    assert (
+        GOALIE_BASELINE_V02_CANDIDATE_VERSION
+        == "apollo-goalie-baseline-v0.2-candidate"
+    )
     assert GOALIE_BASELINE_V02_COMPONENTS == ("sv-5", "gaa-5")
 
 
@@ -113,10 +116,10 @@ def test_goalie_baseline_v02_aggregate_integrates_both_rate_gains_only():
     candidate = {metric.stat_name: metric for metric in aggregate.candidate_metrics}
 
     assert aggregate.player_seasons == 12
-    assert baseline["savePctg"].mae - candidate["savePctg"].mae == pytest.approx(0.0002)
-    assert baseline["goalsAgainstAvg"].mae - candidate["goalsAgainstAvg"].mae == pytest.approx(
-        0.008
-    )
+    sv_gain = baseline["savePctg"].mae - candidate["savePctg"].mae
+    gaa_gain = baseline["goalsAgainstAvg"].mae - candidate["goalsAgainstAvg"].mae
+    assert sv_gain == pytest.approx(0.0002)
+    assert gaa_gain == pytest.approx(0.008)
     for stat_name in ("gamesStarted", "wins", "saves", "goalsAgainst", "shutouts"):
         assert candidate[stat_name] == baseline[stat_name]
 
@@ -210,7 +213,11 @@ def test_goalie_baseline_v02_components_match_approved_single_candidates(tmp_pat
         gaa=2.90,
     )
 
-    integrated = run_goalie_baseline_v02_candidate_aggregate(database, 20252026, years=1)
+    integrated = run_goalie_baseline_v02_candidate_aggregate(
+        database,
+        20252026,
+        years=1,
+    )
     shootout = run_goalie_rate_candidate_aggregate(database, 20252026, years=1)
     metrics = {metric.stat_name: metric for metric in integrated.candidate_metrics}
     sv = next(item for item in shootout.variants if item.spec.name == "sv-5")
