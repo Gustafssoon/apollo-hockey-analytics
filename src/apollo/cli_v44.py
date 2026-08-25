@@ -15,10 +15,6 @@ def _subparsers(parser: argparse.ArgumentParser) -> argparse._SubParsersAction:
     raise RuntimeError("Apollo CLI parser has no subcommands")
 
 
-def _metric(result, stat_name: str):
-    return next(metric for metric in result.metrics if metric.stat_name == stat_name)
-
-
 def _fmt_rho(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.3f}"
 
@@ -30,7 +26,10 @@ def build_parser() -> argparse.ArgumentParser:
     draft_subparsers = _subparsers(draft)
     summary = draft_subparsers.add_parser(
         "goalie-workload-candidate-summary",
-        help="Compare schedule-normalized goalie workload candidates against baseline v0.1",
+        help=(
+            "Compare schedule-normalized goalie workload candidates "
+            "against baseline v0.1"
+        ),
     )
     summary.add_argument("--season", type=int, required=True)
     summary.add_argument("--years", type=int, default=3)
@@ -56,14 +55,21 @@ def _draft_goalie_workload_candidate_summary(args: argparse.Namespace) -> None:
     print("APOLLO GOALIE WORKLOAD CANDIDATE SHOOTOUT")
     print()
     print("Baseline: apollo-goalie-baseline-v0.1 raw 60/30/10 historical GS.")
-    print("Candidates use source GS share normalized by scheduled team games, then project to 82.")
-    print("Only projected GS changes; W/SV/GA/SO follow unchanged baseline per-start rates.")
+    print(
+        "Candidates use source GS share normalized by scheduled team games, "
+        "then project to 82."
+    )
+    print(
+        "Only projected GS changes; W/SV/GA/SO follow unchanged baseline "
+        "per-start rates."
+    )
     print("SV% and GAA must remain exact. Target workload is evaluation only.")
     print(f"Player-seasons: {result.baseline_player_seasons}")
     print()
     print(
         f"{'VARIANT':<14} {'GS MAE':>7} {'GS GAIN':>8} {'GS+':>5} {'WORST':>8} "
-        f"{'GS RHO':>7} {'W GAIN':>7} {'SV GAIN':>8} {'GA GAIN':>8} {'SO GAIN':>8} {'OTHER':>6}"
+        f"{'GS RHO':>7} {'W GAIN':>7} {'SV GAIN':>8} {'GA GAIN':>8} "
+        f"{'SO GAIN':>8} {'OTHER':>6}"
     )
     base_metrics = {metric.stat_name: metric for metric in baseline.metrics}
     for name, _ in GOALIE_WORKLOAD_VARIANTS:
@@ -92,7 +98,10 @@ def _draft_goalie_workload_candidate_summary(args: argparse.Namespace) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
-    if args.command != "draft" or args.draft_command != "goalie-workload-candidate-summary":
+    if (
+        args.command != "draft"
+        or args.draft_command != "goalie-workload-candidate-summary"
+    ):
         v43_cli.main(argv)
         return
     try:
