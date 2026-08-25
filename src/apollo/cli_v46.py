@@ -2,7 +2,9 @@ import argparse
 
 from apollo import cli_v45 as v45_cli
 from apollo.db import Database
-from apollo.draft.goalie_workload_context_candidate import GOALIE_WORKLOAD_CONTEXT_VARIANTS
+from apollo.draft.goalie_workload_context_candidate import (
+    GOALIE_WORKLOAD_CONTEXT_VARIANTS,
+)
 from apollo.draft.projections import ProjectionError
 from apollo.services.goalie_baseline import run_goalie_baseline_aggregate
 from apollo.services.goalie_workload_context_candidate import (
@@ -15,10 +17,6 @@ def _subparsers(parser: argparse.ArgumentParser) -> argparse._SubParsersAction:
         if isinstance(action, argparse._SubParsersAction):
             return action
     raise RuntimeError("Apollo CLI parser has no subcommands")
-
-
-def _metric(result, stat_name: str):
-    return next(metric for metric in result.metrics if metric.stat_name == stat_name)
 
 
 def _fmt_rho(value: float | None) -> str:
@@ -98,7 +96,10 @@ def _draft_goalie_workload_context_candidate_summary(args: argparse.Namespace) -
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
-    if args.command != "draft" or args.draft_command != "goalie-workload-context-candidate-summary":
+    if (
+        args.command != "draft"
+        or args.draft_command != "goalie-workload-context-candidate-summary"
+    ):
         v45_cli.main(argv)
         return
     try:
