@@ -5,7 +5,6 @@ from apollo.draft.goalie_baseline import (
     GoalieBacktestMetric,
     GoalieBacktestPlayer,
     GoalieBacktestResult,
-    build_goalie_backtest_result,
 )
 from apollo.draft.projections import ProjectionError
 
@@ -15,6 +14,15 @@ GOALIE_WORKLOAD_VARIANTS = (
     ("share-801505", (0.80, 0.15, 0.05)),
 )
 TARGET_TEAM_GAMES = 82.0
+GOALIE_WORKLOAD_STATS = (
+    "gamesStarted",
+    "wins",
+    "saves",
+    "goalsAgainst",
+    "shutouts",
+    "savePctg",
+    "goalsAgainstAvg",
+)
 
 
 def scheduled_team_games(season: int) -> float:
@@ -37,7 +45,9 @@ def project_workload_starts(
         if starts <= 0:
             raise ProjectionError("Goalie workload candidate requires positive source starts")
         shares.append(starts / scheduled_team_games(season))
-    weighted_share = sum(share * weight for share, weight in zip(shares, weights, strict=True))
+    weighted_share = sum(
+        share * weight for share, weight in zip(shares, weights, strict=True)
+    )
     return min(TARGET_TEAM_GAMES, max(0.0, weighted_share * TARGET_TEAM_GAMES))
 
 
@@ -102,16 +112,32 @@ def build_goalie_workload_aggregate(
     total_n = sum(item.baseline.evaluated_goalies for item in results)
     variants = []
     for name, _ in GOALIE_WORKLOAD_VARIANTS:
-        season_variants = [next(v for v in item.variants if v.name == name) for item in results]
+        season_variants = [
+            next(variant for variant in item.variants if variant.name == name)
+            for item in results
+        ]
         metrics = []
-        for stat_name in ("gamesStarted", "wins", "saves", "goalsAgainst", "shutouts", "savePctg", "goalsAgainstAvg"):
-            pairs = [(_metric(v.result, stat_name), item.baseline.evaluated_goalies) for v, item in zip(season_variants, results, strict=True)]
+        for stat_name in GOALIE_WORKLOAD_STATS:
+            pairs = [
+                (_metric(variant.result, stat_name), item.baseline.evaluated_goalies)
+                for variant, item in zip(season_variants, results, strict=True)
+            ]
             mae = sum(metric.mae * n for metric, n in pairs) / total_n
-            rho_pairs = [(metric.spearman_rho, n) for metric, n in pairs if metric.spearman_rho is not None]
-            rho = None if not rho_pairs else sum(float(value) * n for value, n in rho_pairs) / sum(n for _, n in rho_pairs)
+            rho_pairs = [
+                (metric.spearman_rho, n)
+                for metric, n in pairs
+                if metric.spearman_rho is not None
+            ]
+            rho = (
+                None
+                if not rho_pairs
+                else sum(float(value) * n for value, n in rho_pairs)
+                / sum(n for _, n in rho_pairs)
+            )
             metrics.append(GoalieBacktestMetric(stat_name, mae, rho, None, None))
         gs_gains = [
-            _metric(item.baseline, "gamesStarted").mae - _metric(variant.result, "gamesStarted").mae
+            _metric(item.baseline, "gamesStarted").mae
+            - _metric(variant.result, "gamesStarted").mae
             for item, variant in zip(results, season_variants, strict=True)
         ]
         variants.append(
