@@ -5,6 +5,7 @@ from apollo.db import Database
 from apollo.draft.assist_rate import build_assist_rate_context_ratio
 from apollo.draft.backtest import BacktestPlayer, ProjectionBacktestResult, build_backtest_result
 from apollo.draft.overall_finishing import build_overall_finishing_context_ratio
+from apollo.draft.pp_deployment import build_pp_deployment_context_ratio
 from apollo.draft.projections import (
     DEFAULT_SEASON_WEIGHTS,
     SKATER_PROJECTION_STATS,
@@ -17,6 +18,7 @@ from apollo.draft.regression import position_group
 from apollo.draft.shooting_context import build_shooting_context_ratio
 from apollo.services.assist_rate import load_assist_rate_priors
 from apollo.services.overall_finishing import load_overall_finishing_priors
+from apollo.services.pp_deployment import load_pp_deployment_priors
 from apollo.services.regression import load_position_priors
 from apollo.services.shooting_context import load_shooting_context_priors
 
@@ -41,6 +43,7 @@ def run_skater_backtest(
     shooting_priors = load_shooting_context_priors(database, source_seasons)
     assist_rate_priors = load_assist_rate_priors(database, source_seasons)
     overall_finishing_priors = load_overall_finishing_priors(database, source_seasons)
+    pp_deployment_priors = load_pp_deployment_priors(database, source_seasons)
     seasons = (target_season, *source_seasons)
     placeholders = ", ".join("?" for _ in seasons)
 
@@ -108,6 +111,7 @@ def run_skater_backtest(
         shooting_history: list[tuple[float, float]] = []
         assist_rate_history: list[tuple[float, float]] = []
         overall_finishing_history: list[tuple[float, float]] = []
+        pp_deployment_history: list[tuple[float, float]] = []
         usable_history_seasons = 0
         first_name, last_name, team_abbrev, position, birth_date_text = player_meta[player_id]
         group = position_group(position)
@@ -141,6 +145,12 @@ def run_skater_backtest(
                     overall_finishing_priors.get((season, group), 0.0),
                 )
             )
+            pp_deployment_history.append(
+                (
+                    season_stats.get("powerPlayTimeOnIcePerGame", -1.0),
+                    pp_deployment_priors.get((season, group), 0.0),
+                )
+            )
 
         history_counts[usable_history_seasons] += 1
         if usable_history_seasons < min_history_seasons:
@@ -160,6 +170,9 @@ def run_skater_backtest(
             overall_finishing_context_ratio = build_overall_finishing_context_ratio(
                 tuple(overall_finishing_history)
             )
+            pp_deployment_context_ratio = build_pp_deployment_context_ratio(
+                tuple(pp_deployment_history)
+            )
             projection = build_skater_projection(
                 player_id=player_id,
                 player_name=player_name,
@@ -172,6 +185,7 @@ def run_skater_backtest(
                 shooting_context_ratio=shooting_context_ratio,
                 assist_rate_context_ratio=assist_rate_context_ratio,
                 overall_finishing_context_ratio=overall_finishing_context_ratio,
+                pp_deployment_context_ratio=pp_deployment_context_ratio,
             )
         except (ProjectionError, ValueError):
             skipped_incomplete_history += 1
