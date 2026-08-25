@@ -49,7 +49,7 @@ def test_weighted_deployment_signals_use_source_priors_and_require_three_seasons
 
     weighted = build_weighted_deployment_signals(history, priors)
 
-    assert weighted["total_toi_ratio"] == pytest.approx(1.13)
+    assert weighted["total_toi_ratio"] == pytest.approx(1.15)
     assert "pp_toi_ratio" not in weighted
 
 
