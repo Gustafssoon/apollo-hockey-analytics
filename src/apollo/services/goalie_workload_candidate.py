@@ -98,7 +98,9 @@ def run_goalie_workload_candidate_backtest(
         baseline_players.append(baseline)
         for name, weights in GOALIE_WORKLOAD_VARIANTS:
             starts = project_workload_starts(tuple(history), weights)
-            candidate_players[name].append(apply_workload_to_baseline(baseline, starts))
+            candidate_players[name].append(
+                apply_workload_to_baseline(baseline, starts)
+            )
 
     baseline_result = build_goalie_backtest_result(
         target_season=target_season,
@@ -132,7 +134,10 @@ def run_goalie_workload_candidate_aggregate(
 ) -> GoalieWorkloadAggregate:
     if years < 1:
         raise ProjectionError("years must be >= 1")
-    targets = (latest_target_season, *previous_seasons(latest_target_season, years - 1))
+    targets = (
+        latest_target_season,
+        *previous_seasons(latest_target_season, years - 1),
+    )
     results = tuple(
         run_goalie_workload_candidate_backtest(
             database,
