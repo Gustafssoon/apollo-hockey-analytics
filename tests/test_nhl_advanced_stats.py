@@ -10,7 +10,7 @@ def _stats_by_name(line):
     return {stat.name: stat.value for stat in line.stats}
 
 
-def test_advanced_adapter_merges_shooting_percentages_and_scoring_rates():
+def test_advanced_adapter_merges_shooting_rates_and_shot_types():
     requested_urls: list[str] = []
 
     def fake_fetch_json(url: str):
@@ -63,65 +63,32 @@ def test_advanced_adapter_merges_shooting_percentages_and_scoring_rates():
                     }
                 ]
             }
-        raise AssertionError(f"Unexpected URL: {url}")
-
-    lines = NHLAdvancedStatsAdapter(fetch_json=fake_fetch_json).fetch_skater_advanced_stats(
-        20252026
-    )
-
-    assert len(lines) == 1
-    stats = _stats_by_name(lines[0])
-    assert stats["shotAttemptsFor5v5"] == 900.0
-    assert stats["shotAttemptsAgainst5v5"] == 700.0
-    assert stats["shotAttemptsRelative5v5"] == 4.25
-    assert stats["unblockedShotAttemptsFor5v5"] == 680.0
-    assert stats["unblockedShotAttemptsPct5v5"] == 0.5484
-    assert stats["timeOnIcePerGame5v5"] == 920.0
-    assert stats["zoneStartPct5v5"] == 0.61
-    assert stats["shootingPct5v5"] == 0.143
-    assert stats["skaterSavePct5v5"] == 0.914
-    assert stats["goals5v5"] == 24.0
-    assert stats["assists5v5"] == 46.0
-    assert stats["goalsPer605v5"] == 1.31
-    assert stats["primaryAssistsPer605v5"] == 1.69
-    assert stats["secondaryAssistsPer605v5"] == 0.82
-    assert any("/skater/summaryshooting?" in url for url in requested_urls)
-    assert any("/skater/percentages?" in url for url in requested_urls)
-    assert any("/skater/scoringRates?" in url for url in requested_urls)
-
-
-def test_empty_percentage_report_preserves_other_advanced_stats():
-    def fake_fetch_json(url: str):
-        if "/skater/summaryshooting?" in url:
-            return {"data": [{"playerId": 1, "satFor": 500, "usatFor": 400}]}
-        if "/skater/percentages?" in url:
-            return {"data": []}
-        if "/skater/scoringRates?" in url:
-            return {"data": [{"playerId": 1, "goalsPer605v5": 1.2}]}
-        raise AssertionError(f"Unexpected URL: {url}")
-
-    lines = NHLAdvancedStatsAdapter(fetch_json=fake_fetch_json).fetch_skater_advanced_stats(
-        20252026
-    )
-
-    stats = _stats_by_name(lines[0])
-    assert stats["shotAttemptsFor5v5"] == 500.0
-    assert stats["unblockedShotAttemptsFor5v5"] == 400.0
-    assert stats["goalsPer605v5"] == 1.2
-    assert "shotAttemptsPct5v5" not in stats
-
-
-def test_scoring_rates_can_add_player_missing_from_other_advanced_reports():
-    def fake_fetch_json(url: str):
-        if "/skater/summaryshooting?" in url or "/skater/percentages?" in url:
-            return {"data": []}
-        if "/skater/scoringRates?" in url:
+        if "/skater/shottype?" in url:
             return {
                 "data": [
                     {
-                        "playerId": 55,
-                        "goalsPer605v5": 0.75,
-                        "primaryAssistsPer605v5": 1.10,
+                        "playerId": 8478402,
+                        "goals": 44,
+                        "shots": 286,
+                        "shootingPct": 0.1538,
+                        "shotsOnNetBackhand": 18,
+                        "goalsBackhand": 3,
+                        "shootingPctBackhand": 0.1667,
+                        "shotsOnNetSlap": 14,
+                        "goalsSlap": 2,
+                        "shootingPctSlap": 0.1429,
+                        "shotsOnNetSnap": 72,
+                        "goalsSnap": 13,
+                        "shootingPctSnap": 0.1806,
+                        "shotsOnNetTipIn": 8,
+                        "goalsTipIn": 3,
+                        "shootingPctTipIn": 0.375,
+                        "shotsOnNetDeflected": 5,
+                        "goalsDeflected": 2,
+                        "shootingPctDeflected": 0.4,
+                        "shotsOnNetWrist": 169,
+                        "goalsWrist": 21,
+                        "shootingPctWrist": 0.1243,
                     }
                 ]
             }
@@ -132,9 +99,68 @@ def test_scoring_rates_can_add_player_missing_from_other_advanced_reports():
     )
 
     assert len(lines) == 1
-    assert lines[0].nhl_player_id == 55
     stats = _stats_by_name(lines[0])
-    assert stats == {"goalsPer605v5": 0.75, "primaryAssistsPer605v5": 1.10}
+    assert stats["shotAttemptsFor5v5"] == 900.0
+    assert stats["unblockedShotAttemptsPct5v5"] == 0.5484
+    assert stats["shootingPct5v5"] == 0.143
+    assert stats["goalsPer605v5"] == 1.31
+    assert stats["primaryAssistsPer605v5"] == 1.69
+    assert stats["secondaryAssistsPer605v5"] == 0.82
+    assert stats["shotTypeGoals"] == 44.0
+    assert stats["shotTypeShots"] == 286.0
+    assert stats["shotsOnNetSnap"] == 72.0
+    assert stats["goalsTipIn"] == 3.0
+    assert stats["shootingPctDeflected"] == 0.4
+    assert stats["shotsOnNetWrist"] == 169.0
+    assert "goals" not in stats
+    assert "shots" not in stats
+    assert any("/skater/summaryshooting?" in url for url in requested_urls)
+    assert any("/skater/percentages?" in url for url in requested_urls)
+    assert any("/skater/scoringRates?" in url for url in requested_urls)
+    assert any("/skater/shottype?" in url for url in requested_urls)
+
+
+def test_empty_percentage_report_preserves_other_advanced_stats():
+    def fake_fetch_json(url: str):
+        if "/skater/summaryshooting?" in url:
+            return {"data": [{"playerId": 1, "satFor": 500, "usatFor": 400}]}
+        if "/skater/percentages?" in url:
+            return {"data": []}
+        if "/skater/scoringRates?" in url:
+            return {"data": [{"playerId": 1, "goalsPer605v5": 1.2}]}
+        if "/skater/shottype?" in url:
+            return {"data": [{"playerId": 1, "shotsOnNetWrist": 100}]}
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    lines = NHLAdvancedStatsAdapter(fetch_json=fake_fetch_json).fetch_skater_advanced_stats(
+        20252026
+    )
+
+    stats = _stats_by_name(lines[0])
+    assert stats["shotAttemptsFor5v5"] == 500.0
+    assert stats["unblockedShotAttemptsFor5v5"] == 400.0
+    assert stats["goalsPer605v5"] == 1.2
+    assert stats["shotsOnNetWrist"] == 100.0
+    assert "shotAttemptsPct5v5" not in stats
+
+
+def test_advanced_reports_can_add_players_missing_from_other_reports():
+    def fake_fetch_json(url: str):
+        if "/skater/summaryshooting?" in url or "/skater/percentages?" in url:
+            return {"data": []}
+        if "/skater/scoringRates?" in url:
+            return {"data": [{"playerId": 55, "goalsPer605v5": 0.75}]}
+        if "/skater/shottype?" in url:
+            return {"data": [{"playerId": 66, "shotsOnNetTipIn": 12, "goalsTipIn": 4}]}
+        raise AssertionError(f"Unexpected URL: {url}")
+
+    lines = NHLAdvancedStatsAdapter(fetch_json=fake_fetch_json).fetch_skater_advanced_stats(
+        20252026
+    )
+
+    assert [line.nhl_player_id for line in lines] == [55, 66]
+    assert _stats_by_name(lines[0]) == {"goalsPer605v5": 0.75}
+    assert _stats_by_name(lines[1]) == {"shotsOnNetTipIn": 12.0, "goalsTipIn": 4.0}
 
 
 def test_advanced_stats_sync_upserts_only_matched_nhl_players(tmp_path):
