@@ -39,6 +39,7 @@ def run_pp_deployment_candidate_backtest(
     *,
     min_actual_games: int = 20,
     min_history_seasons: int = 3,
+    position_group_filter: str | None = None,
 ) -> PPDeploymentSeasonResult:
     if min_actual_games < 1:
         raise ProjectionError("min_actual_games must be >= 1")
@@ -46,6 +47,8 @@ def run_pp_deployment_candidate_backtest(
         raise ProjectionError(
             f"min_history_seasons must be between 1 and {len(DEFAULT_SEASON_WEIGHTS)}"
         )
+    if position_group_filter not in (None, "F", "D"):
+        raise ProjectionError("position_group_filter must be F, D, or None")
 
     database.initialize()
     source_seasons = previous_seasons(target_season, len(DEFAULT_SEASON_WEIGHTS))
@@ -122,6 +125,11 @@ def run_pp_deployment_candidate_backtest(
     }
 
     for player_id, seasons_by_stat in stats_by_player.items():
+        first_name, last_name, team_abbrev, position, birth_date_text = player_meta[player_id]
+        group = position_group(position)
+        if position_group_filter is not None and group != position_group_filter:
+            continue
+
         actual_stats = seasons_by_stat.get(target_season, {})
         if any(stat_name not in actual_stats for stat_name in actual_required):
             continue
@@ -130,8 +138,6 @@ def run_pp_deployment_candidate_backtest(
             continue
 
         actual_eligible_players += 1
-        first_name, last_name, team_abbrev, position, birth_date_text = player_meta[player_id]
-        group = position_group(position)
         history: list[ProjectionSeason] = []
         shooting_history: list[tuple[float, float]] = []
         assist_rate_history: list[tuple[float, float]] = []
