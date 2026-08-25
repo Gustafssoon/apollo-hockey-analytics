@@ -13,6 +13,12 @@ from apollo.draft.availability import (
     AvailabilityError,
     project_available_games,
 )
+from apollo.draft.overall_finishing import (
+    OVERALL_FINISHING_MODEL_VERSION,
+)
+from apollo.draft.overall_finishing import (
+    correction_factor as overall_finishing_correction_factor,
+)
 from apollo.draft.regression import (
     REGRESSION_MODEL_VERSION,
     REGRESSION_PSEUDO_GAMES_BY_STAT,
@@ -26,7 +32,7 @@ from apollo.draft.shooting_context import (
     correction_factor as shooting_context_correction_factor,
 )
 
-MODEL_VERSION = "apollo-skater-baseline-v0.6"
+MODEL_VERSION = "apollo-skater-baseline-v0.7"
 DEFAULT_SEASON_WEIGHTS = (0.6, 0.3, 0.1)
 SKATER_PROJECTION_STATS = (
     "goals",
@@ -65,6 +71,7 @@ class SkaterProjection:
     regression_model_version: str | None = None
     shooting_context_model_version: str | None = None
     assist_rate_model_version: str | None = None
+    overall_finishing_model_version: str | None = None
 
 
 def _season_years(season: int) -> tuple[int, int]:
@@ -105,6 +112,7 @@ def build_skater_projection(
     regression_priors: dict[tuple[int, str, str], float] | None = None,
     shooting_context_ratio: float | None = None,
     assist_rate_context_ratio: float | None = None,
+    overall_finishing_context_ratio: float | None = None,
     season_weights: tuple[float, ...] = DEFAULT_SEASON_WEIGHTS,
 ) -> SkaterProjection:
     if not history:
@@ -190,6 +198,15 @@ def build_skater_projection(
         projected_stats["assists"] *= factor
         assist_rate_applied = True
 
+    overall_finishing_applied = False
+    if overall_finishing_context_ratio is not None:
+        try:
+            factor = overall_finishing_correction_factor(overall_finishing_context_ratio)
+        except ValueError as exc:
+            raise ProjectionError(str(exc)) from exc
+        projected_stats["goals"] *= factor
+        overall_finishing_applied = True
+
     return SkaterProjection(
         player_id=player_id,
         player_name=player_name,
@@ -205,4 +222,7 @@ def build_skater_projection(
             SHOOTING_CONTEXT_MODEL_VERSION if shooting_context_applied else None
         ),
         assist_rate_model_version=(ASSIST_RATE_MODEL_VERSION if assist_rate_applied else None),
+        overall_finishing_model_version=(
+            OVERALL_FINISHING_MODEL_VERSION if overall_finishing_applied else None
+        ),
     )
