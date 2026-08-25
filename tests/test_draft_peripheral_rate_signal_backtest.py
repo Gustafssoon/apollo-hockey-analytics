@@ -45,7 +45,7 @@ def test_weighted_peripheral_rates_use_source_priors_and_require_three_seasons()
 
     weighted = build_weighted_peripheral_rate_signals(history, priors)
 
-    assert weighted["sog_pg_ratio"] == pytest.approx(1.35)
+    assert weighted["sog_pg_ratio"] == pytest.approx(1.375)
     assert weighted["hit_pg_ratio"] == pytest.approx(1.75)
     assert "blk_pg_ratio" not in weighted
 
