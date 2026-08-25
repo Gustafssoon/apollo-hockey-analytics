@@ -189,6 +189,8 @@ def run_goalie_workload_context_candidate_backtest(
         target_season=target_season,
         baseline=baseline_result,
         variants=variants,
+        latest_share_prior=latest_share_prior,
+        age_prior=age_prior,
     )
 
 
