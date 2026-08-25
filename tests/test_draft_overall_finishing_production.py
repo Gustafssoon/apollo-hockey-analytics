@@ -26,7 +26,7 @@ def test_overall_finishing_ratio_uses_calendar_weights_and_requires_three_season
     assert build_overall_finishing_context_ratio(history[:2]) is None
 
 
-def test_projection_overall_finishing_changes_only_goals_and_stamps_v07():
+def test_projection_overall_finishing_changes_only_goals_and_stamps_v08():
     history = tuple(
         ProjectionSeason(
             season=season,
@@ -60,7 +60,7 @@ def test_projection_overall_finishing_changes_only_goals_and_stamps_v07():
         overall_finishing_context_ratio=1.20,
     )
 
-    assert MODEL_VERSION == "apollo-skater-baseline-v0.7"
+    assert MODEL_VERSION == "apollo-skater-baseline-v0.8"
     assert corrected.stats["goals"] == pytest.approx(baseline.stats["goals"] * 0.99)
     for stat_name in ("assists", "powerPlayPoints", "shots", "hits", "blockedShots"):
         assert corrected.stats[stat_name] == pytest.approx(baseline.stats[stat_name])
