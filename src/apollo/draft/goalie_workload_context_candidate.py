@@ -22,8 +22,22 @@ class GoalieWorkloadContextVariantSpec:
 
 
 GOALIE_WORKLOAD_CONTEXT_VARIANTS = (
-    *(GoalieWorkloadContextVariantSpec(f"latest-share-{int(value * 100)}", "latest_share", value) for value in LATEST_SHARE_STRENGTHS),
-    *(GoalieWorkloadContextVariantSpec(f"age-{value * 100:.1f}", "age", value) for value in AGE_SLOPES),
+    *(
+        GoalieWorkloadContextVariantSpec(
+            f"latest-share-{int(value * 100)}",
+            "latest_share",
+            value,
+        )
+        for value in LATEST_SHARE_STRENGTHS
+    ),
+    *(
+        GoalieWorkloadContextVariantSpec(
+            f"age-{value * 100:.1f}",
+            "age",
+            value,
+        )
+        for value in AGE_SLOPES
+    ),
 )
 
 
@@ -39,6 +53,8 @@ class GoalieWorkloadContextSeasonResult:
     target_season: int
     baseline: GoalieBacktestResult
     variants: tuple[GoalieWorkloadContextSeasonVariant, ...]
+    latest_share_prior: float
+    age_prior: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +80,9 @@ def _clamp_factor(value: float) -> float:
 
 def latest_share_factor(latest_share: float, prior_share: float, strength: float) -> float:
     if latest_share < 0 or prior_share <= 0:
-        raise ProjectionError("Goalie latest-share candidate requires non-negative share and positive prior")
+        raise ProjectionError(
+            "Goalie latest-share candidate requires non-negative share and positive prior"
+        )
     if strength < 0:
         raise ProjectionError("Goalie latest-share strength must be non-negative")
     ratio = latest_share / prior_share
