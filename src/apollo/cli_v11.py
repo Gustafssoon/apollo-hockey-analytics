@@ -76,6 +76,10 @@ def _draft_project(args: argparse.Namespace) -> None:
         "not applied (context unavailable)"
     )
     print(f"Overall finishing: {finishing_model}")
+    pp_deployment_model = projection.pp_deployment_model_version or (
+        "not applied (context unavailable)"
+    )
+    print(f"PP deployment: {pp_deployment_model}")
 
 
 def main(argv: list[str] | None = None) -> None:
