@@ -115,7 +115,9 @@ def run_goalie_workload_context_candidate_backtest(
     source_required = set(GOALIE_REQUIRED_SOURCE_STATS)
     eligible = 0
     baseline_players: list[GoalieBacktestPlayer] = []
-    candidate_players = {spec.name: [] for spec in GOALIE_WORKLOAD_CONTEXT_VARIANTS}
+    candidate_players = {
+        spec.name: [] for spec in GOALIE_WORKLOAD_CONTEXT_VARIANTS
+    }
     applied = {spec.name: 0 for spec in GOALIE_WORKLOAD_CONTEXT_VARIANTS}
 
     for player_id, seasons_by_stat in stats_by_player.items():
@@ -148,23 +150,38 @@ def run_goalie_workload_context_candidate_backtest(
             actual_stats=actual,
         )
         baseline_players.append(baseline)
-        latest_share = history[0][1]["gamesStarted"] / scheduled_team_games(history[0][0])
+        latest_share = (
+            history[0][1]["gamesStarted"]
+            / scheduled_team_games(history[0][0])
+        )
         birth_date = _parse_birth_date(birth_dates.get(player_id))
-        age = _target_age(birth_date, target_season) if birth_date is not None else None
+        age = (
+            _target_age(birth_date, target_season)
+            if birth_date is not None
+            else None
+        )
 
         for spec in GOALIE_WORKLOAD_CONTEXT_VARIANTS:
             factor = 1.0
             has_context = True
             if spec.signal == "latest_share":
-                factor = latest_share_factor(latest_share, latest_share_prior, spec.parameter)
+                factor = latest_share_factor(
+                    latest_share,
+                    latest_share_prior,
+                    spec.parameter,
+                )
             elif spec.signal == "age":
                 if age is None:
                     has_context = False
                 else:
                     factor = age_factor(age, age_prior, spec.parameter)
             else:
-                raise ProjectionError(f"Unknown goalie workload context signal: {spec.signal}")
-            candidate_players[spec.name].append(apply_context_factor(baseline, factor))
+                raise ProjectionError(
+                    f"Unknown goalie workload context signal: {spec.signal}"
+                )
+            candidate_players[spec.name].append(
+                apply_context_factor(baseline, factor)
+            )
             if has_context:
                 applied[spec.name] += 1
 
