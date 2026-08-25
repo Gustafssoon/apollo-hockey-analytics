@@ -63,7 +63,10 @@ class GoalieBaselineAggregate:
 def _weighted(values: tuple[float, ...]) -> float:
     if len(values) != len(GOALIE_SEASON_WEIGHTS):
         raise ProjectionError("Goalie baseline requires exactly three source seasons")
-    return sum(value * weight for value, weight in zip(values, GOALIE_SEASON_WEIGHTS, strict=True))
+    return sum(
+        value * weight
+        for value, weight in zip(values, GOALIE_SEASON_WEIGHTS, strict=True)
+    )
 
 
 def build_goalie_projection(
@@ -80,7 +83,10 @@ def build_goalie_projection(
         if any(stat_name not in stats for stat_name in GOALIE_REQUIRED_SOURCE_STATS):
             raise ProjectionError("Goalie baseline source season is missing required stats")
 
-    projected_starts = min(82.0, max(0.0, _weighted(tuple(stats["gamesStarted"] for _, stats in history))))
+    projected_starts = min(
+        82.0,
+        max(0.0, _weighted(tuple(stats["gamesStarted"] for _, stats in history))),
+    )
     projected_stats: dict[str, float] = {}
     for stat_name in GOALIE_TOTAL_STATS:
         projected_rate = _weighted(
@@ -110,10 +116,8 @@ def _actual_value(player: GoalieBacktestPlayer, stat_name: str) -> float:
 
 
 def _oracle_starts_value(player: GoalieBacktestPlayer, stat_name: str) -> float:
-    if stat_name in GOALIE_RATIO_STATS:
-        return player.projected_stats[stat_name]
-    if stat_name == "gamesStarted":
-        return player.actual_starts
+    if stat_name not in GOALIE_TOTAL_STATS:
+        raise ProjectionError("Goalie oracle-start metric only supports total stats")
     if player.projected_starts <= 0:
         raise ProjectionError("Goalie oracle-start metric requires positive projected starts")
     return player.projected_stats[stat_name] / player.projected_starts * player.actual_starts
@@ -135,7 +139,7 @@ def build_goalie_backtest_result(
         mae = sum(abs(p - a) for p, a in zip(projected, actual, strict=True)) / len(players)
         oracle_mae: float | None = None
         oracle_rho: float | None = None
-        if stat_name != "gamesStarted":
+        if stat_name in GOALIE_TOTAL_STATS:
             oracle = [_oracle_starts_value(player, stat_name) for player in players]
             oracle_mae = sum(abs(p - a) for p, a in zip(oracle, actual, strict=True)) / len(players)
             oracle_rho = spearman_rank_correlation(oracle, actual)
@@ -170,14 +174,47 @@ def build_goalie_baseline_aggregate(
 
     metrics: list[GoalieBacktestMetric] = []
     for stat_name in GOALIE_BACKTEST_STATS:
-        season_metrics = [next(metric for metric in result.metrics if metric.stat_name == stat_name) for result in results]
-        mae = sum(metric.mae * result.evaluated_goalies for metric, result in zip(season_metrics, results, strict=True)) / total_n
-        rho_pairs = [(metric.spearman_rho, result.evaluated_goalies) for metric, result in zip(season_metrics, results, strict=True) if metric.spearman_rho is not None]
-        rho = None if not rho_pairs else sum(float(value) * weight for value, weight in rho_pairs) / sum(weight for _, weight in rho_pairs)
-        oracle_pairs = [(metric.oracle_starts_mae, result.evaluated_goalies) for metric, result in zip(season_metrics, results, strict=True) if metric.oracle_starts_mae is not None]
-        oracle_mae = None if not oracle_pairs else sum(float(value) * weight for value, weight in oracle_pairs) / sum(weight for _, weight in oracle_pairs)
-        oracle_rho_pairs = [(metric.oracle_starts_spearman_rho, result.evaluated_goalies) for metric, result in zip(season_metrics, results, strict=True) if metric.oracle_starts_spearman_rho is not None]
-        oracle_rho = None if not oracle_rho_pairs else sum(float(value) * weight for value, weight in oracle_rho_pairs) / sum(weight for _, weight in oracle_rho_pairs)
+        season_metrics = [
+            next(metric for metric in result.metrics if metric.stat_name == stat_name)
+            for result in results
+        ]
+        mae = sum(
+            metric.mae * result.evaluated_goalies
+            for metric, result in zip(season_metrics, results, strict=True)
+        ) / total_n
+        rho_pairs = [
+            (metric.spearman_rho, result.evaluated_goalies)
+            for metric, result in zip(season_metrics, results, strict=True)
+            if metric.spearman_rho is not None
+        ]
+        rho = (
+            None
+            if not rho_pairs
+            else sum(float(value) * weight for value, weight in rho_pairs)
+            / sum(weight for _, weight in rho_pairs)
+        )
+        oracle_pairs = [
+            (metric.oracle_starts_mae, result.evaluated_goalies)
+            for metric, result in zip(season_metrics, results, strict=True)
+            if metric.oracle_starts_mae is not None
+        ]
+        oracle_mae = (
+            None
+            if not oracle_pairs
+            else sum(float(value) * weight for value, weight in oracle_pairs)
+            / sum(weight for _, weight in oracle_pairs)
+        )
+        oracle_rho_pairs = [
+            (metric.oracle_starts_spearman_rho, result.evaluated_goalies)
+            for metric, result in zip(season_metrics, results, strict=True)
+            if metric.oracle_starts_spearman_rho is not None
+        ]
+        oracle_rho = (
+            None
+            if not oracle_rho_pairs
+            else sum(float(value) * weight for value, weight in oracle_rho_pairs)
+            / sum(weight for _, weight in oracle_rho_pairs)
+        )
         metrics.append(
             GoalieBacktestMetric(
                 stat_name=stat_name,
