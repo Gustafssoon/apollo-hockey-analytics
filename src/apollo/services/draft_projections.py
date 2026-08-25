@@ -2,6 +2,7 @@ from datetime import date
 
 from apollo.db import Database
 from apollo.draft.assist_rate import build_assist_rate_context_ratio
+from apollo.draft.overall_finishing import build_overall_finishing_context_ratio
 from apollo.draft.projections import (
     ProjectionError,
     ProjectionSeason,
@@ -12,6 +13,7 @@ from apollo.draft.projections import (
 from apollo.draft.regression import position_group
 from apollo.draft.shooting_context import build_shooting_context_ratio
 from apollo.services.assist_rate import load_assist_rate_priors
+from apollo.services.overall_finishing import load_overall_finishing_priors
 from apollo.services.regression import load_position_priors
 from apollo.services.shooting_context import load_shooting_context_priors
 
@@ -31,6 +33,7 @@ def project_skater(
     regression_priors = load_position_priors(database, source_seasons)
     shooting_priors = load_shooting_context_priors(database, source_seasons)
     assist_rate_priors = load_assist_rate_priors(database, source_seasons)
+    overall_finishing_priors = load_overall_finishing_priors(database, source_seasons)
 
     with database.connect() as connection:
         players = connection.execute(
@@ -94,6 +97,7 @@ def project_skater(
     group = position_group(position)
     shooting_history: list[tuple[float, float]] = []
     assist_rate_history: list[tuple[float, float]] = []
+    overall_finishing_history: list[tuple[float, float]] = []
     for season in source_seasons:
         stats = by_season.get(season, {})
         history.append(
@@ -115,10 +119,19 @@ def project_skater(
                 assist_rate_priors.get((season, group), 0.0),
             )
         )
+        overall_finishing_history.append(
+            (
+                stats.get("shotTypeShootingPct", -1.0),
+                overall_finishing_priors.get((season, group), 0.0),
+            )
+        )
 
     try:
         shooting_context_ratio = build_shooting_context_ratio(tuple(shooting_history))
         assist_rate_context_ratio = build_assist_rate_context_ratio(tuple(assist_rate_history))
+        overall_finishing_context_ratio = build_overall_finishing_context_ratio(
+            tuple(overall_finishing_history)
+        )
     except ValueError as exc:
         raise ProjectionError(str(exc)) from exc
 
@@ -133,4 +146,5 @@ def project_skater(
         regression_priors=regression_priors,
         shooting_context_ratio=shooting_context_ratio,
         assist_rate_context_ratio=assist_rate_context_ratio,
+        overall_finishing_context_ratio=overall_finishing_context_ratio,
     )
