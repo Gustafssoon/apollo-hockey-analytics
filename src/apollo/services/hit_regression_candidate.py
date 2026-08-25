@@ -177,19 +177,35 @@ def run_hit_regression_candidate_backtest(
             if games_played > 0:
                 usable_history_seasons += 1
             history.append(
-                ProjectionSeason(season=season, games_played=games_played, stats=stats)
+                ProjectionSeason(
+                    season=season,
+                    games_played=games_played,
+                    stats=stats,
+                )
             )
             shooting_history.append(
-                (stats.get("shootingPct5v5", 0.0), shooting_priors.get((season, group), 0.0))
+                (
+                    stats.get("shootingPct5v5", 0.0),
+                    shooting_priors.get((season, group), 0.0),
+                )
             )
             assist_history.append(
-                (stats.get("assistsPer605v5", -1.0), assist_rate_priors.get((season, group), 0.0))
+                (
+                    stats.get("assistsPer605v5", -1.0),
+                    assist_rate_priors.get((season, group), 0.0),
+                )
             )
             finishing_history.append(
-                (stats.get("shotTypeShootingPct", -1.0), finishing_priors.get((season, group), 0.0))
+                (
+                    stats.get("shotTypeShootingPct", -1.0),
+                    finishing_priors.get((season, group), 0.0),
+                )
             )
             pp_history.append(
-                (stats.get("powerPlayTimeOnIcePerGame", -1.0), pp_priors.get((season, group), 0.0))
+                (
+                    stats.get("powerPlayTimeOnIcePerGame", -1.0),
+                    pp_priors.get((season, group), 0.0),
+                )
             )
 
         history_counts[usable_history_seasons] += 1
@@ -215,12 +231,18 @@ def run_hit_regression_candidate_backtest(
                 history=tuple(history),
                 birth_date=birth_date,
                 regression_priors=regression_priors,
-                shooting_context_ratio=build_shooting_context_ratio(tuple(shooting_history)),
-                assist_rate_context_ratio=build_assist_rate_context_ratio(tuple(assist_history)),
+                shooting_context_ratio=build_shooting_context_ratio(
+                    tuple(shooting_history)
+                ),
+                assist_rate_context_ratio=build_assist_rate_context_ratio(
+                    tuple(assist_history)
+                ),
                 overall_finishing_context_ratio=build_overall_finishing_context_ratio(
                     tuple(finishing_history)
                 ),
-                pp_deployment_context_ratio=build_pp_deployment_context_ratio(tuple(pp_history)),
+                pp_deployment_context_ratio=build_pp_deployment_context_ratio(
+                    tuple(pp_history)
+                ),
             )
         except (ProjectionError, ValueError):
             skipped_incomplete_history += 1
