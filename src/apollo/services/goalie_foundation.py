@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from apollo.db import Database
 from apollo.draft.goalie_foundation import GoalieFoundationAudit, build_goalie_foundation_audit
-from apollo.draft.projections import previous_seasons
+from apollo.draft.projections import ProjectionError, previous_seasons
 
 
 def run_goalie_foundation_audit(
@@ -11,6 +11,9 @@ def run_goalie_foundation_audit(
     *,
     years: int = 3,
 ) -> GoalieFoundationAudit:
+    if years < 1:
+        raise ProjectionError("Goalie foundation audit years must be >= 1")
+
     database.initialize()
     target_seasons = (
         latest_target_season,
