@@ -9,13 +9,14 @@ from apollo.draft.goalie_rate_candidate import (
     apply_rate_regression,
     regress_to_prior,
 )
+from apollo.draft.projections import ProjectionError
 from apollo.services.goalie_rate_candidate import run_goalie_rate_candidate_backtest
 
 
 def test_regress_to_prior_is_locked_linear_mean_reversion():
     assert regress_to_prior(0.930, 0.910, 0.05) == pytest.approx(0.929)
     assert regress_to_prior(3.00, 2.50, 0.20) == pytest.approx(2.90)
-    with pytest.raises(Exception):
+    with pytest.raises(ProjectionError):
         regress_to_prior(0.920, 0.910, 1.10)
 
 
