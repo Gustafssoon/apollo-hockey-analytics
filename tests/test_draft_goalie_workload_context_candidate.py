@@ -59,8 +59,14 @@ def test_context_factor_changes_workload_totals_only():
     assert candidate.projected_stats["saves"] == pytest.approx(1080.0)
     assert candidate.projected_stats["goalsAgainst"] == pytest.approx(90.0)
     assert candidate.projected_stats["shutouts"] == pytest.approx(3.6)
-    assert candidate.projected_stats["savePctg"] == baseline.projected_stats["savePctg"]
-    assert candidate.projected_stats["goalsAgainstAvg"] == baseline.projected_stats["goalsAgainstAvg"]
+    assert (
+        candidate.projected_stats["savePctg"]
+        == baseline.projected_stats["savePctg"]
+    )
+    assert (
+        candidate.projected_stats["goalsAgainstAvg"]
+        == baseline.projected_stats["goalsAgainstAvg"]
+    )
 
 
 def _insert_goalie(database: Database, name: str, birth_date: str) -> int:
@@ -120,7 +126,11 @@ def test_context_priors_are_source_only_when_target_workload_changes(tmp_path):
     evaluated = _insert_goalie(database, "Evaluated Goalie", "1996-01-01")
     source_peer = _insert_goalie(database, "Source Peer", "1990-01-01")
 
-    for season, starts in ((20242025, 40.0), (20232024, 35.0), (20222023, 30.0)):
+    for season, starts in (
+        (20242025, 40.0),
+        (20232024, 35.0),
+        (20222023, 30.0),
+    ):
         _insert_goalie_season(database, evaluated, season, starts)
     _insert_goalie_season(database, source_peer, 20242025, 20.0)
     _insert_goalie_season(database, evaluated, 20252026, 30.0)
@@ -138,10 +148,18 @@ def test_context_candidate_variants_and_cli_contract():
     assert LATEST_SHARE_STRENGTHS == (0.05, 0.10, 0.20)
     assert AGE_SLOPES == (0.005, 0.010, 0.020)
     assert len(GOALIE_WORKLOAD_CONTEXT_VARIANTS) == 6
-    assert {spec.signal for spec in GOALIE_WORKLOAD_CONTEXT_VARIANTS} == {"latest_share", "age"}
+    assert {spec.signal for spec in GOALIE_WORKLOAD_CONTEXT_VARIANTS} == {
+        "latest_share",
+        "age",
+    }
 
     args = cli_v46.build_parser().parse_args(
-        ["draft", "goalie-workload-context-candidate-summary", "--season", "20252026"]
+        [
+            "draft",
+            "goalie-workload-context-candidate-summary",
+            "--season",
+            "20252026",
+        ]
     )
     assert args.command == "draft"
     assert args.draft_command == "goalie-workload-context-candidate-summary"
